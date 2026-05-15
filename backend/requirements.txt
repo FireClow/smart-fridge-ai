@@ -1,0 +1,10 @@
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+pydantic>=2,<3
+python-multipart>=0.0.9,<1
+python-dotenv>=1,<2
+supabase>=2,<3
+ultralytics>=8.0,<9
+opencv-python-headless>=4.9,<5
+numpy>=1.24,<3
+slowapi>=0.1.9,<1

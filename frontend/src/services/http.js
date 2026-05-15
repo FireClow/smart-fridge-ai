@@ -1,0 +1,40 @@
+import axios from "axios";
+import { apiUrl } from "../lib/apiBase.js";
+
+export const http = axios.create({
+  headers: { Accept: "application/json" },
+});
+
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem("sb-access-token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+http.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status = error.response?.status;
+    const data = error.response?.data;
+    let message = error.message;
+    if (data?.detail) {
+      message =
+        typeof data.detail === "string"
+          ? data.detail
+          : JSON.stringify(data.detail);
+    }
+    if (status === 401) {
+      localStorage.removeItem("sb-access-token");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(new Error(message));
+  },
+);
+
+export function apiPath(path) {
+  return apiUrl(path);
+}

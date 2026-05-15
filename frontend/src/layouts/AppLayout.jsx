@@ -1,0 +1,52 @@
+import { Outlet } from "react-router-dom";
+import { AppNav } from "../components/AppNav.jsx";
+import { useHealth } from "../hooks/useHealth.js";
+
+const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
+
+export function AppLayout() {
+  const { online, health } = useHealth();
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <AppNav online={online} yoloLoaded={health?.yolo_loaded} />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {!useDummy && health?.status === "ok" && !("yolo_loaded" in health) ? (
+          <div className="mb-6 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            Outdated API detected — stop old servers and run{" "}
+            <code className="text-rose-100">.\scripts\start-api.ps1</code> (port{" "}
+            <code className="text-rose-100">8001</code>), then restart{" "}
+            <code className="text-rose-100">npm run dev</code> in{" "}
+            <code className="text-rose-100">frontend</code>.
+          </div>
+        ) : null}
+        {!useDummy && health && health.yolo_loaded === false ? (
+          <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            YOLO model not loaded
+            {health.model_exists ? (
+              <>
+                {" "}
+                — restart the API from the project root so it loads{" "}
+                <code className="text-amber-100">{health.model_path}</code>.
+              </>
+            ) : (
+              <>
+                {" "}
+                — set <code className="text-amber-100">MODEL_PATH</code> in root{" "}
+                <code className="text-amber-100">.env</code> to your trained{" "}
+                <code className="text-amber-100">best.pt</code> and restart the API.
+              </>
+            )}
+            {health.yolo_load_error ? (
+              <span className="mt-1 block text-xs text-amber-200/80">{health.yolo_load_error}</span>
+            ) : null}
+          </div>
+        ) : null}
+        <Outlet />
+      </main>
+      <footer className="border-t border-gray-800/80 py-6 text-center text-xs text-gray-600">
+        Smart Refrigerator · Computer Vision · {new Date().getFullYear()}
+      </footer>
+    </div>
+  );
+}
