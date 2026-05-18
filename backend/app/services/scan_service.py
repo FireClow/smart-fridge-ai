@@ -80,9 +80,19 @@ def _persist_detections(
       )
       insert_detection_log(client, item_name, quantity, conf_val, user_id=user_id)
     except Exception as exc:
+      detail = str(exc)
+      if "expires_at" in detail and "does not exist" in detail:
+        detail = (
+          f"{detail} — Run supabase_migration_inventory_expiry.sql in Supabase "
+          "SQL Editor (adds inventory.expires_at / expiry_locked), then retry scan."
+        )
+      elif "user_id" in detail and "does not exist" in detail:
+        detail = (
+          f"{detail} — Run supabase_migration_multi_user.sql, or scan without logging in."
+        )
       raise HTTPException(
         status_code=502,
-        detail=f"Database write failed: {exc}",
+        detail=f"Database write failed: {detail}",
       ) from exc
     items.append(
       {

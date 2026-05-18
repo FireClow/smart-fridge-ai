@@ -3,8 +3,6 @@ import { useSettings } from "../context/SettingsContext.jsx";
 import { fetchHealth, fetchModelInfo } from "../services/api.js";
 import { useEffect, useState } from "react";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 export function SettingsPage() {
   const { user, signOut } = useAuth();
   const { confidence, setConfidence, defaultAutoScan, setDefaultAutoScan } = useSettings();
@@ -12,7 +10,6 @@ export function SettingsPage() {
   const [modelInfo, setModelInfo] = useState(null);
 
   useEffect(() => {
-    if (useDummy) return;
     void (async () => {
       try {
         const [h, m] = await Promise.all([fetchHealth(), fetchModelInfo()]);
@@ -57,23 +54,21 @@ export function SettingsPage() {
         </label>
       </section>
 
-      {!useDummy ? (
-        <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 text-sm text-gray-400">
-          <h2 className="font-semibold uppercase tracking-wider text-gray-400">System</h2>
-          <p className="mt-2">
-            API: {health?.status ?? "unknown"} · YOLO:{" "}
-            {health?.yolo_loaded ? "loaded" : "not loaded"}
-          </p>
-          {modelInfo?.loaded ? (
-            <p className="mt-1">Classes: {modelInfo.num_classes}</p>
-          ) : null}
-          {health?.model_path ? (
-            <p className="mt-1 break-all text-xs text-gray-500">{health.model_path}</p>
-          ) : null}
-        </section>
-      ) : null}
+      <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-5 text-sm text-gray-400">
+        <h2 className="font-semibold uppercase tracking-wider text-gray-400">System</h2>
+        <p className="mt-2">
+          API: {health?.status ?? "unknown"} · YOLO:{" "}
+          {health?.yolo_loaded ? "loaded" : "not loaded"}
+        </p>
+        {modelInfo?.loaded ? (
+          <p className="mt-1">Classes: {modelInfo.num_classes}</p>
+        ) : null}
+        {health?.model_path ? (
+          <p className="mt-1 break-all text-xs text-gray-500">{health.model_path}</p>
+        ) : null}
+      </section>
 
-      {!useDummy && user ? (
+      {user ? (
         <section className="rounded-xl border border-gray-800 bg-gray-900/50 p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
             Account

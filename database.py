@@ -62,10 +62,15 @@ def _first_row(response) -> dict[str, Any]:
   return rows[0] if rows else {}
 
 
+_INVENTORY_COLUMNS = "id, item_name, quantity, updated_at, expires_at, expiry_locked"
+_DETECTION_LOG_COLUMNS = "id, item_name, quantity, confidence, detected_at"
+
+
 def _inventory_query(client: Client, user_id: str | None):
-  q = client.table("inventory").select(
-    "id, item_name, quantity, updated_at, expires_at, expiry_locked, user_id"
-  )
+  columns = _INVENTORY_COLUMNS
+  if user_id:
+    columns = f"{_INVENTORY_COLUMNS}, user_id"
+  q = client.table("inventory").select(columns)
   if user_id:
     q = q.eq("user_id", user_id)
   return q
@@ -225,9 +230,12 @@ def get_inventory(client: Client, user_id: str | None = None) -> list[dict[str, 
 def get_detection_logs(
   client: Client, limit: int = 20, user_id: str | None = None
 ) -> list[dict[str, Any]]:
+  columns = _DETECTION_LOG_COLUMNS
+  if user_id:
+    columns = f"{_DETECTION_LOG_COLUMNS}, user_id"
   q = (
     client.table("detection_logs")
-    .select("id, item_name, quantity, confidence, detected_at, user_id")
+    .select(columns)
     .order("detected_at", desc=True)
     .limit(limit)
   )

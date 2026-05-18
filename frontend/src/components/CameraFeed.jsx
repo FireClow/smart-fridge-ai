@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { postScanImage } from "../services/api.js";
 import { useSettings } from "../context/SettingsContext.jsx";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
 const AUTO_MS = 3000;
 
 function captureVideoFrame(video, canvas) {
@@ -47,8 +46,6 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
   }, []);
 
   useEffect(() => {
-    if (useDummy) return undefined;
-
     let cancelled = false;
     (async () => {
       try {
@@ -82,10 +79,8 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
 
   const runScan = useCallback(
     async (blob) => {
-      if (useDummy || !blob) {
-        if (!blob && !useDummy) {
-          setScanError("Camera not ready. Wait for video to load.");
-        }
+      if (!blob) {
+        setScanError("Camera not ready. Wait for video to load.");
         return null;
       }
       if (scanInFlightRef.current) return null;
@@ -144,7 +139,7 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
 
   const scheduleAutoScan = useCallback(() => {
     if (autoTimerRef.current) clearTimeout(autoTimerRef.current);
-    if (!autoScan || useDummy || cameraError) return;
+    if (!autoScan || cameraError) return;
 
     autoTimerRef.current = setTimeout(async () => {
       if (document.visibilityState !== "visible") {
@@ -156,7 +151,7 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
       }
       scheduleAutoScan();
     }, AUTO_MS);
-  }, [autoScan, cameraError, scanFromVideo, useDummy]);
+  }, [autoScan, cameraError, scanFromVideo]);
 
   useEffect(() => {
     scheduleAutoScan();
@@ -177,19 +172,13 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
       <canvas ref={canvasRef} className="hidden" aria-hidden />
 
       <div className="relative aspect-video w-full bg-black">
-        {useDummy ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-sm text-gray-500">
-            <p>Demo mode: set VITE_USE_DUMMY=false to use live camera and scan API.</p>
-          </div>
-        ) : (
-          <video
-            ref={videoRef}
-            className="h-full w-full object-cover"
-            playsInline
-            muted
-            autoPlay
-          />
-        )}
+        <video
+          ref={videoRef}
+          className="h-full w-full object-cover"
+          playsInline
+          muted
+          autoPlay
+        />
         {scanning ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
             <span className="h-12 w-12 animate-pulse rounded-full border-2 border-cyan-400 border-t-transparent" />
@@ -219,7 +208,7 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
         </span>
         <button
           type="button"
-          disabled={useDummy || !!cameraError || scanning}
+          disabled={!!cameraError || scanning}
           onClick={() => void scanFromVideo()}
           className="rounded-lg border border-cyan-600/50 bg-cyan-600/20 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-600/30 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -230,7 +219,7 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
             type="file"
             accept="image/jpeg,image/png,image/*"
             className="sr-only"
-            disabled={useDummy || scanning}
+            disabled={scanning}
             onChange={onFileChange}
           />
           Upload photo
@@ -239,12 +228,12 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
           <input
             type="checkbox"
             checked={autoScan}
-            disabled={useDummy || !!cameraError}
+            disabled={!!cameraError}
             onChange={(e) => setAutoScan(e.target.checked)}
           />
           Auto-scan / 3s
         </label>
-        {autoScan && !useDummy ? (
+        {autoScan ? (
           <span className="text-xs text-cyan-500/80">Auto active</span>
         ) : null}
         <span className="ml-auto flex items-center gap-2 text-xs text-gray-500">

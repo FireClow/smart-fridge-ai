@@ -1,36 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  fetchNotifications,
-  generateNotifications,
-  markNotificationRead,
-} from "../services/api.js";
+import { useState } from "react";
+import { markNotificationRead } from "../services/api.js";
+import { useNotifications } from "../hooks/useNotifications.js";
 
 export function NotificationsPage() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filterUnread, setFilterUnread] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      await generateNotifications().catch(() => {});
-      const data = await fetchNotifications(filterUnread, 50);
-      setItems(Array.isArray(data) ? data : []);
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filterUnread]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { notifications: items, loading, reload } = useNotifications(filterUnread, 50);
 
   const onMarkRead = async (id) => {
     try {
       await markNotificationRead(id);
-      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      void reload();
     } catch {
       /* ignore */
     }

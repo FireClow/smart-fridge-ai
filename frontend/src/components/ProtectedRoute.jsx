@@ -1,13 +1,9 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 export function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-
-  if (useDummy) return children;
 
   if (loading) {
     return (

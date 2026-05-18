@@ -9,8 +9,6 @@ import {
 } from "../lib/format.js";
 import { patchInventoryExpiry } from "../services/api.js";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 const toneClass = {
   expired: "border-red-500/40 bg-red-500/15 text-red-200",
   critical: "border-red-500/30 bg-red-500/10 text-red-100",
@@ -51,10 +49,6 @@ export function InventoryCard({ item, confidence, onSaved }) {
   };
 
   const saveExpiry = async () => {
-    if (useDummy) {
-      setOpen(false);
-      return;
-    }
     setSaving(true);
     setErr(null);
     try {
@@ -118,9 +112,7 @@ export function InventoryCard({ item, confidence, onSaved }) {
         <button
           type="button"
           onClick={openModal}
-          disabled={useDummy}
-          title={useDummy ? "Disable demo mode to edit expiry via API" : undefined}
-          className="mt-4 w-full rounded-lg border border-gray-700 bg-gray-800/50 py-2 text-xs font-medium text-gray-200 hover:border-cyan-500/40 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="mt-4 w-full rounded-lg border border-gray-700 bg-gray-800/50 py-2 text-xs font-medium text-gray-200 hover:border-cyan-500/40 hover:bg-gray-800"
         >
           Set expiry
         </button>

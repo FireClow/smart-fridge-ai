@@ -2,11 +2,9 @@ import { Outlet } from "react-router-dom";
 import { AppNav } from "../components/AppNav.jsx";
 import { useHealth } from "../hooks/useHealth.js";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 export function AppLayout() {
   const { online, health } = useHealth();
-  const apiDown = !useDummy && !online && health == null;
+  const apiDown = !online && health == null;
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -20,7 +18,7 @@ export function AppLayout() {
             <code className="text-rose-100">8001</code>), lalu refresh halaman ini.
           </div>
         ) : null}
-        {!useDummy && health?.status === "ok" && !("yolo_loaded" in health) ? (
+        {health?.status === "ok" && !("yolo_loaded" in health) ? (
           <div className="mb-6 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
             Outdated API detected — stop old servers and run{" "}
             <code className="text-rose-100">.\scripts\start-api.ps1</code> (port{" "}
@@ -29,7 +27,7 @@ export function AppLayout() {
             <code className="text-rose-100">frontend</code>.
           </div>
         ) : null}
-        {!useDummy && health && health.yolo_loaded === false ? (
+        {health && health.yolo_loaded === false ? (
           <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             YOLO model not loaded
             {health.model_exists ? (

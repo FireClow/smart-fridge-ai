@@ -30,11 +30,24 @@ def main() -> int:
     rows = get_inventory(client)
   except APIError as exc:
     print(f"get_inventory: FAILED — {exc}", file=sys.stderr)
-    print(
-      "Hint: run supabase_schema.sql in the Supabase SQL Editor "
-      "(Table Editor should then show inventory / detection_logs).",
-      file=sys.stderr,
-    )
+    err = str(exc)
+    if "expires_at" in err:
+      print(
+        "Hint: run supabase_migration_inventory_expiry.sql in Supabase SQL Editor.",
+        file=sys.stderr,
+      )
+    elif "user_id" in err:
+      print(
+        "Hint: run supabase_migration_multi_user.sql, or use the app without login "
+        "(backend skips user_id when not authenticated).",
+        file=sys.stderr,
+      )
+    else:
+      print(
+        "Hint: run supabase_schema.sql / migrations in Supabase SQL Editor, "
+        "or: python scripts/apply_supabase_schema.py if SUPABASE_DB_URL is set.",
+        file=sys.stderr,
+      )
     return 2
   except Exception as exc:  # pragma: no cover
     print(f"get_inventory: FAILED — {exc}", file=sys.stderr)

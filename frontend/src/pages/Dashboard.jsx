@@ -4,12 +4,10 @@ import { CameraFeed } from "../components/CameraFeed.jsx";
 import { ExpiryAlerts } from "../components/ExpiryAlerts.jsx";
 import { InventoryCard } from "../components/InventoryCard.jsx";
 import { StatsCard } from "../components/StatsCard.jsx";
-import { dummyStats } from "../data/dummyData.js";
 import { useInventory } from "../hooks/useInventory.js";
 import { useLogs } from "../hooks/useLogs.js";
-import { fetchNotifications, fetchStats, generateNotifications } from "../services/api.js";
-
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
+import { useNotifications } from "../hooks/useNotifications.js";
+import { fetchStats } from "../services/api.js";
 
 const emptyStats = {
   total_items: 0,
@@ -37,18 +35,16 @@ function latestConfidenceByItem(logs) {
 export function Dashboard() {
   const { inventory, loading: invLoading, reload: reloadInventory } = useInventory();
   const { logs, loading: logLoading, reload: reloadLogs } = useLogs(25);
+  const {
+    notifications,
+    loading: notifLoading,
+    reload: reloadNotifications,
+  } = useNotifications(true, 10);
   const [stats, setStats] = useState(emptyStats);
   const [statsLoading, setStatsLoading] = useState(true);
   const [lastFps, setLastFps] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [notifLoading, setNotifLoading] = useState(true);
 
   const loadStats = useCallback(async () => {
-    if (useDummy) {
-      setStats(dummyStats);
-      setStatsLoading(false);
-      return;
-    }
     try {
       const s = await fetchStats();
       setStats(s);
@@ -59,28 +55,13 @@ export function Dashboard() {
     }
   }, []);
 
-  const loadNotifications = useCallback(async () => {
-    if (useDummy) {
-      setNotifications([]);
-      setNotifLoading(false);
-      return;
-    }
-    setNotifLoading(true);
-    try {
-      await generateNotifications().catch(() => {});
-      const data = await fetchNotifications(true, 10);
-      setNotifications(Array.isArray(data) ? data : []);
-    } catch {
-      setNotifications([]);
-    } finally {
-      setNotifLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    void loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     void loadStats();
-    void loadNotifications();
-  }, [loadStats, loadNotifications]);
+  }, [inventory, logs, loadStats]);
 
   const onScanComplete = useCallback(
     (data) => {
@@ -88,9 +69,9 @@ export function Dashboard() {
       void reloadInventory();
       void reloadLogs();
       void loadStats();
-      void loadNotifications();
+      void reloadNotifications();
     },
-    [reloadInventory, reloadLogs, loadStats, loadNotifications],
+    [reloadInventory, reloadLogs, loadStats, reloadNotifications],
   );
 
   const confMap = useMemo(() => latestConfidenceByItem(logs), [logs]);
@@ -151,7 +132,7 @@ export function Dashboard() {
         <div className="mb-4 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-lg font-semibold text-white">Live inventory</h2>
-            <p className="text-sm text-gray-500">Updates after each scan · Supabase realtime</p>
+            <p className="text-sm text-gray-500">Updates via Supabase Realtime</p>
           </div>
           {invLoading ? (
             <span className="text-xs font-medium uppercase tracking-wider text-cyan-400/80">

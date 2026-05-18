@@ -3,6 +3,11 @@ import { supabase } from "../services/supabase.js";
 
 const AuthContext = createContext(null);
 
+function syncRealtimeAuth(accessToken) {
+  if (!supabase) return;
+  supabase.realtime.setAuth(accessToken ?? null);
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,15 +19,18 @@ export function AuthProvider({ children }) {
     }
 
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      if (data.session?.access_token) {
-        localStorage.setItem("sb-access-token", data.session.access_token);
+      const s = data.session ?? null;
+      setSession(s);
+      syncRealtimeAuth(s?.access_token);
+      if (s?.access_token) {
+        localStorage.setItem("sb-access-token", s.access_token);
       }
       setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
+      syncRealtimeAuth(next?.access_token);
       if (next?.access_token) {
         localStorage.setItem("sb-access-token", next.access_token);
       } else {
@@ -55,6 +63,7 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
+    syncRealtimeAuth(null);
     localStorage.removeItem("sb-access-token");
     setSession(null);
   }, []);

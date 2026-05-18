@@ -11,8 +11,6 @@ import { NotificationsPage } from "./pages/NotificationsPage.jsx";
 import { Register } from "./pages/Register.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 export default function App() {
   return (
     <BrowserRouter>

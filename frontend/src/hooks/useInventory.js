@@ -1,22 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { dummyInventory } from "../data/dummyData.js";
+import { useAuth } from "../context/AuthContext.jsx";
 import { fetchInventory } from "../services/api.js";
 import { subscribeInventory, supabase } from "../services/supabase.js";
 
-const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
-
 export function useInventory() {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(false);
 
   const load = useCallback(async () => {
-    if (useDummy) {
-      setInventory(dummyInventory);
-      setOnline(true);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const data = await fetchInventory();
@@ -32,13 +26,12 @@ export function useInventory() {
 
   useEffect(() => {
     void load();
-    if (useDummy) return undefined;
     if (!supabase) return undefined;
     const unsub = subscribeInventory(() => {
       void load();
-    });
+    }, userId);
     return unsub;
-  }, [load]);
+  }, [load, userId]);
 
   return { inventory, loading, online, reload: load };
 }

@@ -28,7 +28,7 @@ pip install -r backend/requirements.txt
 
 Copy `.env.example` to `.env` and set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or `SUPABASE_KEY`), and `MODEL_PATH`.
 
-Copy `frontend/.env.example` to `frontend/.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+Copy `frontend/.env.example` to `frontend/.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_KEY`.
 
 ### 3. Database (Supabase SQL Editor)
 
@@ -37,10 +37,17 @@ Run in order:
 1. `supabase_schema.sql`
 2. `supabase_migration_inventory_expiry.sql` (if upgrading an old DB)
 3. `supabase_migration_multi_user.sql`
+4. `supabase_migration_realtime.sql`
 
 Enable **Email** auth in Supabase → Authentication → Providers.
 
-Enable **Realtime** for `inventory`, `detection_logs`, `expiration_notifications`.
+**Realtime** is enabled by step 4 (SQL). You can also turn it on in **Database → Replication** for `inventory`, `detection_logs`, and `expiration_notifications`.
+
+Verify:
+
+```sql
+SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+```
 
 ### 4. YOLO weights
 

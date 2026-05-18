@@ -61,6 +61,6 @@ Register / sign in with email + password (enable Email provider in Supabase).
 
 Auto-scan uses a 3s chained timeout (no overlapping requests).
 
-## Demo mode
+## Realtime
 
-`VITE_USE_DUMMY=true` — local dummy data only, no auth or API.
+The dashboard subscribes to Supabase `postgres_changes` on `inventory`, `detection_logs`, and `expiration_notifications`. Run `supabase_migration_realtime.sql` (or enable Realtime in the Supabase dashboard) so the UI updates without a full page reload.
