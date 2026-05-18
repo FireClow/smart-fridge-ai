@@ -6,11 +6,20 @@ const useDummy = import.meta.env.VITE_USE_DUMMY === "true";
 
 export function AppLayout() {
   const { online, health } = useHealth();
+  const apiDown = !useDummy && !online && health == null;
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
-      <AppNav online={online} yoloLoaded={health?.yolo_loaded} />
+      <AppNav online={online} yoloLoaded={health?.yolo_loaded} apiDown={apiDown} />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {apiDown ? (
+          <div className="mb-6 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            Backend API tidak berjalan. Buka terminal baru di root project, jalankan{" "}
+            <code className="text-rose-100">.\scripts\start-api.ps1</code>, tunggu pesan
+            &quot;Application startup complete&quot; (~20 detik, port{" "}
+            <code className="text-rose-100">8001</code>), lalu refresh halaman ini.
+          </div>
+        ) : null}
         {!useDummy && health?.status === "ok" && !("yolo_loaded" in health) ? (
           <div className="mb-6 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
             Outdated API detected — stop old servers and run{" "}

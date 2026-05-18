@@ -21,6 +21,7 @@ runs/
 *.zip
 dataset_1/
 dataset_2/
+dataset_combined/
 Dataset*/
 
 # Model weights (large binary)

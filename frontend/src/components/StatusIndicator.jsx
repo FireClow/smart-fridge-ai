@@ -1,4 +1,9 @@
-export function StatusIndicator({ online }) {
+export function StatusIndicator({ online, apiDown }) {
+  const label = online
+    ? "System Online"
+    : apiDown
+      ? "API offline — start-api.ps1"
+      : "Offline / Demo data";
   return (
     <div className="flex items-center gap-2 rounded-full border border-gray-700 bg-gray-900/80 px-3 py-1.5">
       <span
@@ -17,9 +22,7 @@ export function StatusIndicator({ online }) {
           }`}
         />
       </span>
-      <span className="text-xs font-medium tracking-wide text-gray-300">
-        {online ? "System Online" : "Offline / Demo data"}
-      </span>
+      <span className="text-xs font-medium tracking-wide text-gray-300">{label}</span>
     </div>
   );
 }

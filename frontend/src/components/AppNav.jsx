@@ -9,7 +9,7 @@ const links = [
   { to: "/settings", label: "Settings" },
 ];
 
-export function AppNav({ online, yoloLoaded }) {
+export function AppNav({ online, yoloLoaded, apiDown }) {
   return (
     <header className="border-b border-gray-800/80 bg-gray-950/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
@@ -46,7 +46,7 @@ export function AppNav({ online, yoloLoaded }) {
             </NavLink>
           ))}
         </nav>
-        <StatusIndicator online={online} />
+        <StatusIndicator online={online} apiDown={apiDown} />
       </div>
     </header>
   );

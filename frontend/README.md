@@ -15,16 +15,32 @@ cd frontend
 cp .env.example .env
 ```
 
-Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Leave `VITE_API_URL` empty in dev (Vite proxies `/api` → port 8000).
+Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` (publishable/anon key from Supabase Dashboard). Leave `VITE_API_URL` empty in dev (Vite proxies `/api` → FastAPI).
 
 ## Run
 
-```bash
+**Butuh 2 proses:** frontend (Vite) + backend (FastAPI). Tanpa API, proxy `/api` gagal (`ECONNREFUSED 127.0.0.1:8001`).
+
+**Opsi A — satu perintah (Windows):**
+
+```powershell
+# Dari root project
+.\scripts\dev.ps1
+```
+
+**Opsi B — dua terminal:**
+
+```powershell
+# Terminal 1 (root project)
+.\scripts\start-api.ps1
+
+# Terminal 2
+cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173
+Tunggu ~20 detik sampai API selesai load YOLO, lalu buka http://localhost:5173
 
 Register / sign in with email + password (enable Email provider in Supabase).
 

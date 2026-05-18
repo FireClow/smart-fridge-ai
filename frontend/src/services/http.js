@@ -18,7 +18,12 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const data = error.response?.data;
+    const isNetworkError = !error.response;
     let message = error.message;
+    if (isNetworkError) {
+      message =
+        "Backend API tidak berjalan. Buka terminal baru di root project dan jalankan: .\\scripts\\start-api.ps1 (menunggu ~20 detik, port 8001).";
+    }
     if (data?.detail) {
       message =
         typeof data.detail === "string"

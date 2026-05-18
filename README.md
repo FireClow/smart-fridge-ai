@@ -39,7 +39,7 @@ Enable **Realtime** for `inventory`, `detection_logs`, `expiration_notifications
 
 ### 4. YOLO weights
 
-Train or place weights at `runs/detect/train-5/weights/best.pt` (see `train.py`).
+Train or place weights at `runs/detect/train-5/weights/best.pt` (see `train.py`). Panduan meningkatkan akurasi: **`PANDUAN_TRAINING.md`**. Gabung `dataset_2`–`dataset_4` (kelas baru ditambahkan setelah kelas dataset_2): **`python scripts/build_combined_dataset.py`** → **`dataset_combined/data.yaml`** + **`dataset_combined_classes.txt`**; lalu `train.py --data dataset_combined/data.yaml`. Sesuaikan app jika jumlah kelas (`nc`) naik.
 
 ### 5. Run locally
 

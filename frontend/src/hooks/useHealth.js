@@ -15,24 +15,6 @@ export function useHealth() {
     }
     try {
       const data = await fetchHealth();
-      // #region agent log
-      fetch("http://127.0.0.1:7473/ingest/ab1a7fbe-0ea8-4c96-b77b-f5a196c26570", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "51eb5f" },
-        body: JSON.stringify({
-          sessionId: "51eb5f",
-          location: "useHealth.js:load",
-          message: "health fetched",
-          data: {
-            status: data?.status,
-            yolo_loaded: data?.yolo_loaded,
-            has_yolo_loaded_key: data != null && "yolo_loaded" in data,
-          },
-          timestamp: Date.now(),
-          hypothesisId: "D",
-        }),
-      }).catch(() => {});
-      // #endregion
       setHealth(data);
       setOnline(data?.status === "ok");
     } catch {
