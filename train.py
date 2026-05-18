@@ -1,6 +1,6 @@
 """YOLOv8 training script for Smart Fridge food detection.
 
-Lihat PANDUAN_TRAINING.md untuk meningkatkan akurasi (data, model, epoch, imgsz).
+Lihat docs/PANDUAN_TRAINING.md untuk meningkatkan akurasi (data, model, epoch, imgsz).
 """
 
 from __future__ import annotations
