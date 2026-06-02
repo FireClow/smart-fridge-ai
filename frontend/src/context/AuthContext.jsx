@@ -61,6 +61,33 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const registerAndSignIn = useCallback(async (email, password, displayName) => {
+    if (!supabase) throw new Error("Supabase is not configured.");
+
+    // Register account first.
+    const { error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: displayName || email.split("@")[0] },
+      },
+    });
+    if (signUpError) throw signUpError;
+
+    // Then immediately try sign-in so user can continue without email flow.
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (!signInError) return signInData;
+
+    // If this happens, Supabase project still requires email confirmation.
+    throw new Error(
+      "Account created, but your Supabase project still requires email confirmation. " +
+        "Disable 'Confirm email' in Supabase Auth > Providers > Email to enable direct sign-in.",
+    );
+  }, []);
+
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
     syncRealtimeAuth(null);
@@ -75,10 +102,11 @@ export function AuthProvider({ children }) {
       loading,
       signIn,
       signUp,
+      registerAndSignIn,
       signOut,
       isAuthenticated: !!session,
     }),
-    [session, loading, signIn, signUp, signOut],
+    [session, loading, signIn, signUp, registerAndSignIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

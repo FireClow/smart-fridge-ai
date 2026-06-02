@@ -69,6 +69,30 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
     }
   }, []);
 
+  const analyzeFile = useCallback(async (file) => {
+    if (!file || inFlightRef.current) return null;
+    inFlightRef.current = true;
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    try {
+      const data = await cvAnalyze(file, modeRef.current, abortRef.current.signal);
+      setResult(data);
+      setError(null);
+      return data;
+    } catch (e) {
+      if (
+        e?.name !== "CanceledError" &&
+        e?.code !== "ERR_CANCELED" &&
+        !e?.message?.includes("canceled")
+      ) {
+        setError(e?.message || "CV analysis failed");
+      }
+      return null;
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -126,5 +150,6 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
     error,
     setRunning,
     analyzeOnce,
+    analyzeFile,
   };
 }

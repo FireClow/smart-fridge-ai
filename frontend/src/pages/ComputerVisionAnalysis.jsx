@@ -23,7 +23,7 @@ const PREPROCESS_LABELS = {
 export function ComputerVisionAnalysis() {
   const { user } = useAuth();
   const { preprocessMode, setPreprocessMode } = useSettings();
-  const { videoRef, canvasRef, result, metrics, running, error, setRunning } = useCvAnalysis({
+  const { videoRef, canvasRef, result, metrics, running, error, setRunning, analyzeFile } = useCvAnalysis({
     preprocessMode,
   });
 
@@ -32,6 +32,8 @@ export function ComputerVisionAnalysis() {
   const [events, setEvents] = useState([]);
   const [detections, setDetections] = useState({});
   const [eventBusy, setEventBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState("");
   const captureCanvasRef = useRef(null);
 
   useEffect(() => {
@@ -102,6 +104,23 @@ export function ComputerVisionAnalysis() {
     }
   }, [captureFrame, loadEvents]);
 
+  const onUploadAnalyze = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const analyzed = await analyzeFile(file);
+      if (analyzed) {
+        setUploadLabel(file.name);
+        // Freeze camera loop so uploaded result stays visible until resumed.
+        setRunning(false);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, [analyzeFile, setRunning]);
+
   const yoloCount = Object.values(detections).reduce((a, b) => a + Number(b || 0), 0);
 
   return (
@@ -136,8 +155,24 @@ export function ComputerVisionAnalysis() {
           >
             {running ? "Pause" : "Resume"}
           </button>
+          <label className="cursor-pointer rounded-lg border border-violet-600/50 bg-violet-600/20 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/30">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/*"
+              className="sr-only"
+              onChange={onUploadAnalyze}
+              disabled={uploading}
+            />
+            {uploading ? "Analyzing..." : "Upload image"}
+          </label>
         </div>
       </div>
+
+      {uploadLabel ? (
+        <p className="text-xs text-violet-300/90">
+          Showing uploaded analysis: <span className="font-medium">{uploadLabel}</span>
+        </p>
+      ) : null}
 
       {error ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
