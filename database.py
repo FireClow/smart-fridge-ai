@@ -284,3 +284,79 @@ def mark_notification_read(
     q = q.eq("user_id", user_id)
   response = q.execute()
   return _first_row(response)
+
+
+# --- Computer Vision: inventory events (Phase 8) ----------------------------
+
+_CV_EVENT_COLUMNS = "id, item_name, event_type, magnitude, created_at"
+_REFERENCE_BUCKET = "food-references"
+
+
+def insert_cv_event(
+  client: Client,
+  item_name: str,
+  event_type: str,
+  magnitude: float,
+  user_id: str | None = None,
+) -> dict[str, Any]:
+  """Persist one smart-inventory event (added/removed/moved)."""
+  payload: dict[str, Any] = {
+    "item_name": item_name,
+    "event_type": event_type,
+    "magnitude": float(magnitude),
+    "created_at": datetime.now(timezone.utc).isoformat(),
+  }
+  if user_id:
+    payload["user_id"] = user_id
+  response = client.table("cv_events").insert(payload).execute()
+  return _first_row(response)
+
+
+def get_cv_events(
+  client: Client, limit: int = 50, user_id: str | None = None
+) -> list[dict[str, Any]]:
+  columns = _CV_EVENT_COLUMNS
+  if user_id:
+    columns = f"{_CV_EVENT_COLUMNS}, user_id"
+  q = (
+    client.table("cv_events")
+    .select(columns)
+    .order("created_at", desc=True)
+    .limit(limit)
+  )
+  if user_id:
+    q = q.eq("user_id", user_id)
+  try:
+    response = q.execute()
+    return response.data or []
+  except Exception:
+    return []
+
+
+# --- Computer Vision: reference images for ORB matching (Phase 4) -----------
+
+
+def _reference_path(class_name: str) -> str:
+  safe = "".join(c for c in class_name.lower() if c.isalnum() or c in ("_", "-"))
+  return f"{safe or 'item'}.jpg"
+
+
+def upload_reference_image(client: Client, class_name: str, raw: bytes) -> str:
+  """Upload (or replace) a reference image for a food class to Storage."""
+  path = _reference_path(class_name)
+  storage = client.storage.from_(_REFERENCE_BUCKET)
+  storage.upload(
+    path,
+    raw,
+    {"content-type": "image/jpeg", "upsert": "true"},
+  )
+  return path
+
+
+def get_reference_image(client: Client, class_name: str) -> bytes | None:
+  """Download the reference image bytes for a class, or None if missing."""
+  path = _reference_path(class_name)
+  try:
+    return client.storage.from_(_REFERENCE_BUCKET).download(path)
+  except Exception:
+    return None

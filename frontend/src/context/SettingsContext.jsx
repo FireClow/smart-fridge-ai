@@ -4,6 +4,9 @@ const SettingsContext = createContext(null);
 
 const CONF_KEY = "sf-confidence";
 const AUTO_KEY = "sf-auto-scan";
+const PREPROCESS_KEY = "sf-preprocess-mode";
+
+export const PREPROCESS_MODES = ["none", "gaussian", "bilateral", "clahe"];
 
 function readNum(key, fallback) {
   const v = localStorage.getItem(key);
@@ -12,11 +15,17 @@ function readNum(key, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function readPreprocess() {
+  const v = localStorage.getItem(PREPROCESS_KEY);
+  return PREPROCESS_MODES.includes(v) ? v : "none";
+}
+
 export function SettingsProvider({ children }) {
   const [confidence, setConfidenceState] = useState(() => readNum(CONF_KEY, 0.6));
   const [defaultAutoScan, setDefaultAutoScanState] = useState(
     () => localStorage.getItem(AUTO_KEY) === "true",
   );
+  const [preprocessMode, setPreprocessModeState] = useState(readPreprocess);
 
   const setConfidence = (v) => {
     setConfidenceState(v);
@@ -28,14 +37,22 @@ export function SettingsProvider({ children }) {
     localStorage.setItem(AUTO_KEY, v ? "true" : "false");
   };
 
+  const setPreprocessMode = (v) => {
+    const mode = PREPROCESS_MODES.includes(v) ? v : "none";
+    setPreprocessModeState(mode);
+    localStorage.setItem(PREPROCESS_KEY, mode);
+  };
+
   const value = useMemo(
     () => ({
       confidence,
       setConfidence,
       defaultAutoScan,
       setDefaultAutoScan,
+      preprocessMode,
+      setPreprocessMode,
     }),
-    [confidence, defaultAutoScan],
+    [confidence, defaultAutoScan, preprocessMode],
   );
 
   return (

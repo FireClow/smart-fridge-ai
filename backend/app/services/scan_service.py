@@ -13,6 +13,7 @@ import numpy as np
 from fastapi import HTTPException
 from supabase import Client
 
+from backend.app.cv.preprocessing import apply_preprocess, normalize_mode
 from backend.app.metrics import last_fps, record_inference_seconds
 from backend.app.services.expiration_service import generate_notifications
 from database import connect_to_supabase, insert_detection_log, upsert_inventory_from_detection
@@ -60,6 +61,13 @@ def _run_yolo(model, image: np.ndarray, confidence: float) -> tuple[Any, dict]:
 def _encode_preview(results) -> str | None:
   annotated = results[0].plot()
   ok, encoded = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+  if not ok:
+    return None
+  return base64.b64encode(encoded.tobytes()).decode("ascii")
+
+
+def _encode_image(image: np.ndarray) -> str | None:
+  ok, encoded = cv2.imencode(".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
   if not ok:
     return None
   return base64.b64encode(encoded.tobytes()).decode("ascii")
@@ -113,6 +121,7 @@ async def process_scan(
   confidence: float,
   model,
   user_id: str | None = None,
+  preprocess_mode: str | None = None,
 ) -> dict[str, Any]:
   if content_type and content_type.split(";")[0].strip().lower() not in _ALLOWED_CONTENT_TYPES:
     raise HTTPException(
@@ -120,7 +129,12 @@ async def process_scan(
       detail=f"Unsupported content type: {content_type}. Use JPEG or PNG.",
     )
 
-  image = _decode_image(raw)
+  original = _decode_image(raw)
+
+  # Image Filtering & Enhancement: optionally clean/enhance the frame BEFORE
+  # YOLO sees it. 'none' keeps the original behavior intact.
+  mode = normalize_mode(preprocess_mode)
+  image = apply_preprocess(original, mode) if mode != "none" else original
 
   results, inventory = await asyncio.to_thread(_run_yolo, model, image, confidence)
 
@@ -143,9 +157,16 @@ async def process_scan(
   fps = fps_val
   preview = _encode_preview(results)
 
+  # Original vs filtered previews so the dashboard can show the comparison.
+  original_preview = _encode_image(original)
+  filtered_preview = _encode_image(image) if mode != "none" else None
+
   return {
     "items": items,
     "annotated_image_base64": preview,
+    "original_image_base64": original_preview,
+    "filtered_image_base64": filtered_preview,
+    "preprocess_mode": mode,
     "inference_ms": inference_ms,
     "fps": fps,
     "detected_count": len(items),

@@ -15,6 +15,6 @@ foreach ($p in @(8000, 8001)) {
 
 Start-Sleep -Seconds 2
 
-Write-Host "Starting API on http://127.0.0.1:$port (YOLO loads at startup — wait ~20s)..."
+Write-Host "Starting API on http://127.0.0.1:$port (YOLO loads at startup - wait ~20s)..."
 Write-Host "Vite proxies /api -> port $port (see frontend/vite.config.js)"
 & "$root\venv\Scripts\python.exe" -m uvicorn backend.main:app --host 127.0.0.1 --port $port

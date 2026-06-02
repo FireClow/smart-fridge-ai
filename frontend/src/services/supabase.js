@@ -64,3 +64,8 @@ export function subscribeLogs(onChange, userId = null) {
 export function subscribeNotifications(onChange, userId = null) {
   return subscribePostgresChanges("expiration_notifications", onChange, userId);
 }
+
+/** Subscribe to cv_events table changes (smart inventory events). */
+export function subscribeCvEvents(onChange, userId = null) {
+  return subscribePostgresChanges("cv_events", onChange, userId);
+}

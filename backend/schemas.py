@@ -65,6 +65,9 @@ class ScanItemResult(BaseModel):
 class ScanResponse(BaseModel):
   items: list[ScanItemResult]
   annotated_image_base64: str | None = None
+  original_image_base64: str | None = None
+  filtered_image_base64: str | None = None
+  preprocess_mode: str = "none"
   inference_ms: float = 0
   fps: float = 0
   detected_count: int = 0

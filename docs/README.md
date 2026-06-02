@@ -6,6 +6,7 @@ Real-time food inventory management using YOLOv8 object detection for smart refr
 
 - [Frontend dashboard](frontend.md) — React/Vite setup, pages, scan API
 - [Training guide (ID)](PANDUAN_TRAINING.md) — meningkatkan akurasi YOLOv8
+- [CV pipeline](CV_PIPELINE.md) — classical Computer Vision modules + course-topic mapping
 
 ## Stack
 

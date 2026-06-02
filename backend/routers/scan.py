@@ -32,10 +32,15 @@ async def scan_image(
   request: Request,
   file: UploadFile = File(...),
   confidence: float = Query(0.6, ge=0.05, le=0.99),
+  preprocess_mode: str = Query("none"),
   model=Depends(get_yolo),
   user_id: str | None = Depends(get_optional_user_id),
 ) -> dict[str, Any]:
-  """Run detection on one image; upsert inventory and append detection logs."""
+  """Run detection on one image; upsert inventory and append detection logs.
+
+  `preprocess_mode` (none|gaussian|bilateral|clahe) applies an Image
+  Filtering & Enhancement step before YOLO inference.
+  """
   raw = await file.read()
   return await process_scan(
     raw=raw,
@@ -43,4 +48,5 @@ async def scan_image(
     confidence=confidence,
     model=model,
     user_id=user_id,
+    preprocess_mode=preprocess_mode,
   )

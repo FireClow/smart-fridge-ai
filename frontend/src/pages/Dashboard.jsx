@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityLog } from "../components/ActivityLog.jsx";
 import { CameraFeed } from "../components/CameraFeed.jsx";
 import { ExpiryAlerts } from "../components/ExpiryAlerts.jsx";
+import { FilterComparison } from "../components/FilterComparison.jsx";
 import { InventoryCard } from "../components/InventoryCard.jsx";
 import { StatsCard } from "../components/StatsCard.jsx";
 import { useInventory } from "../hooks/useInventory.js";
@@ -43,6 +44,7 @@ export function Dashboard() {
   const [stats, setStats] = useState(emptyStats);
   const [statsLoading, setStatsLoading] = useState(true);
   const [lastFps, setLastFps] = useState(null);
+  const [lastScan, setLastScan] = useState(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -66,6 +68,7 @@ export function Dashboard() {
   const onScanComplete = useCallback(
     (data) => {
       if (data?.fps != null) setLastFps(data.fps);
+      if (data) setLastScan(data);
       void reloadInventory();
       void reloadLogs();
       void loadStats();
@@ -127,6 +130,17 @@ export function Dashboard() {
           <ActivityLog logs={logs} loading={logLoading} />
         </div>
       </section>
+
+      {lastScan?.original_image_base64 &&
+      (lastScan?.preprocess_mode ?? "none") !== "none" ? (
+        <section className="mb-10">
+          <FilterComparison
+            original={lastScan.original_image_base64}
+            filtered={lastScan.filtered_image_base64}
+            mode={lastScan.preprocess_mode}
+          />
+        </section>
+      ) : null}
 
       <section>
         <div className="mb-4 flex items-end justify-between gap-4">

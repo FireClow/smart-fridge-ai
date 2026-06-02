@@ -19,7 +19,7 @@ function captureVideoFrame(video, canvas) {
 }
 
 export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
-  const { confidence: settingsConf, defaultAutoScan } = useSettings();
+  const { confidence: settingsConf, defaultAutoScan, preprocessMode } = useSettings();
   const confidence = confidenceProp ?? settingsConf;
 
   const videoRef = useRef(null);
@@ -96,7 +96,12 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
       try {
         const file =
           blob instanceof File ? blob : new File([blob], "scan.jpg", { type: "image/jpeg" });
-        const data = await postScanImage(file, confidence, abortRef.current.signal);
+        const data = await postScanImage(
+          file,
+          confidence,
+          abortRef.current.signal,
+          preprocessMode,
+        );
         if (data?.annotated_image_base64) {
           setPreview(`data:image/jpeg;base64,${data.annotated_image_base64}`);
         } else {
@@ -126,7 +131,7 @@ export function CameraFeed({ onScanComplete, confidence: confidenceProp }) {
         setScanning(false);
       }
     },
-    [confidence, onScanComplete],
+    [confidence, onScanComplete, preprocessMode],
   );
 
   const scanFromVideo = useCallback(async () => {

@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import { AppLayout } from "./layouts/AppLayout.jsx";
+import { ComputerVisionAnalysis } from "./pages/ComputerVisionAnalysis.jsx";
 import { Dashboard } from "./pages/Dashboard.jsx";
 import { HistoryPage } from "./pages/HistoryPage.jsx";
 import { InventoryPage } from "./pages/InventoryPage.jsx";
@@ -27,6 +28,7 @@ export default function App() {
               }
             >
               <Route index element={<Dashboard />} />
+              <Route path="computer-vision-analysis" element={<ComputerVisionAnalysis />} />
               <Route path="inventory" element={<InventoryPage />} />
               <Route path="history" element={<HistoryPage />} />
               <Route path="notifications" element={<NotificationsPage />} />

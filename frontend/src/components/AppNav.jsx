@@ -3,6 +3,7 @@ import { StatusIndicator } from "./StatusIndicator.jsx";
 
 const links = [
   { to: "/", label: "Dashboard", end: true },
+  { to: "/computer-vision-analysis", label: "CV Analysis" },
   { to: "/inventory", label: "Inventory" },
   { to: "/history", label: "History" },
   { to: "/notifications", label: "Notifications" },
