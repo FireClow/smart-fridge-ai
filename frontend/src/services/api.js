@@ -36,7 +36,6 @@ export async function postScanImage(file, confidence = 0.6, signal, preprocessMo
     form,
     {
       params: { confidence, preprocess_mode: preprocessMode },
-      headers: { "Content-Type": "multipart/form-data" },
       signal,
     },
   );
@@ -83,12 +82,19 @@ function cvHeaders(extra = {}) {
   return { "X-CV-Session": cvSessionId(), ...extra };
 }
 
+function multipartConfig(extra = {}) {
+  return {
+    headers: cvHeaders(extra),
+    // Let axios/browser set multipart boundary; do not set Content-Type manually.
+  };
+}
+
 export async function cvAnalyze(file, preprocessMode = "none", signal) {
   const form = new FormData();
   form.append("file", file, file.name || "frame.jpg");
   const { data } = await http.post(apiPath("/api/cv/analyze"), form, {
     params: { preprocess_mode: preprocessMode },
-    headers: cvHeaders({ "Content-Type": "multipart/form-data" }),
+    ...multipartConfig(),
     signal,
   });
   return data;
@@ -106,7 +112,7 @@ export async function cvMatch(file, className, signal) {
   form.append("file", file, file.name || "crop.jpg");
   const { data } = await http.post(apiPath("/api/cv/match"), form, {
     params: { class_name: className },
-    headers: cvHeaders({ "Content-Type": "multipart/form-data" }),
+    ...multipartConfig(),
     signal,
   });
   return data;
@@ -117,7 +123,7 @@ export async function cvHomography(file, className, warp = false, signal) {
   form.append("file", file, file.name || "crop.jpg");
   const { data } = await http.post(apiPath("/api/cv/homography"), form, {
     params: { class_name: className, warp },
-    headers: cvHeaders({ "Content-Type": "multipart/form-data" }),
+    ...multipartConfig(),
     signal,
   });
   return data;
@@ -128,7 +134,7 @@ export async function cvDetectEvents(file, confidence = 0.6, signal) {
   form.append("file", file, file.name || "frame.jpg");
   const { data } = await http.post(apiPath("/api/cv/events"), form, {
     params: { confidence },
-    headers: cvHeaders({ "Content-Type": "multipart/form-data" }),
+    ...multipartConfig(),
     signal,
   });
   return data;
@@ -147,7 +153,7 @@ export async function uploadReferenceImage(className, file) {
   form.append("file", file, file.name || "reference.jpg");
   const enc = encodeURIComponent(className);
   const { data } = await http.post(apiPath(`/api/cv/reference/${enc}`), form, {
-    headers: cvHeaders({ "Content-Type": "multipart/form-data" }),
+    ...multipartConfig(),
   });
   return data;
 }

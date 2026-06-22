@@ -10,6 +10,7 @@ import { TrackingPanel } from "../components/TrackingPanel.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { PREPROCESS_MODES, useSettings } from "../context/SettingsContext.jsx";
 import { useCvAnalysis } from "../hooks/useCvAnalysis.js";
+import { ALLOWED_IMAGE_ACCEPT, validateImageFile } from "../lib/imageUpload.js";
 import { cvDetectEvents, fetchCvEvents, fetchModelInfo } from "../services/api.js";
 import { subscribeCvEvents, supabase } from "../services/supabase.js";
 
@@ -23,7 +24,7 @@ const PREPROCESS_LABELS = {
 export function ComputerVisionAnalysis() {
   const { user } = useAuth();
   const { preprocessMode, setPreprocessMode } = useSettings();
-  const { videoRef, canvasRef, result, metrics, running, error, setRunning, analyzeFile } = useCvAnalysis({
+  const { videoRef, canvasRef, result, metrics, running, error, setRunning, setError, analyzeFile } = useCvAnalysis({
     preprocessMode,
   });
 
@@ -34,7 +35,10 @@ export function ComputerVisionAnalysis() {
   const [eventBusy, setEventBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [uploadPreview, setUploadPreview] = useState(null);
   const captureCanvasRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     void (async () => {
@@ -62,6 +66,12 @@ export function ComputerVisionAnalysis() {
     const unsub = subscribeCvEvents(() => void loadEvents(), user?.id ?? null);
     return unsub;
   }, [loadEvents, user?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (uploadPreview) URL.revokeObjectURL(uploadPreview);
+    };
+  }, [uploadPreview]);
 
   const captureFrame = useCallback(async () => {
     const video = videoRef.current;
@@ -108,18 +118,36 @@ export function ComputerVisionAnalysis() {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+
+    const validated = validateImageFile(file);
+    if (!validated.ok) {
+      setUploadSuccess("");
+      setUploadLabel("");
+      setUploadPreview(null);
+      setError(validated.message);
+      return;
+    }
+
+    setUploadSuccess("");
+    setError(null);
+    setRunning(false);
     setUploading(true);
+    setUploadLabel(validated.file.name);
+    setUploadPreview(URL.createObjectURL(validated.file));
+
     try {
-      const analyzed = await analyzeFile(file);
+      const analyzed = await analyzeFile(validated.file);
       if (analyzed) {
-        setUploadLabel(file.name);
-        // Freeze camera loop so uploaded result stays visible until resumed.
-        setRunning(false);
+        setUploadSuccess(`Analysis complete for ${validated.file.name}.`);
       }
     } finally {
       setUploading(false);
     }
-  }, [analyzeFile, setRunning]);
+  }, [analyzeFile, setError, setRunning]);
+
+  const openFilePicker = useCallback(() => {
+    if (!uploading) fileInputRef.current?.click();
+  }, [uploading]);
 
   const yoloCount = Object.values(detections).reduce((a, b) => a + Number(b || 0), 0);
 
@@ -150,27 +178,49 @@ export function ComputerVisionAnalysis() {
           </label>
           <button
             type="button"
-            onClick={() => setRunning((v) => !v)}
+            onClick={() => {
+              setRunning((v) => {
+                const next = !v;
+                if (next) {
+                  setUploadPreview(null);
+                  setUploadLabel("");
+                  setUploadSuccess("");
+                }
+                return next;
+              });
+            }}
             className="rounded-lg border border-cyan-600/50 bg-cyan-600/20 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-600/30"
           >
             {running ? "Pause" : "Resume"}
           </button>
-          <label className="cursor-pointer rounded-lg border border-violet-600/50 bg-violet-600/20 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/30">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/*"
-              className="sr-only"
-              onChange={onUploadAnalyze}
-              disabled={uploading}
-            />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={openFilePicker}
+            className="rounded-lg border border-violet-600/50 bg-violet-600/20 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-600/30 disabled:cursor-not-allowed disabled:opacity-50"
+          >
             {uploading ? "Analyzing..." : "Upload image"}
-          </label>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALLOWED_IMAGE_ACCEPT}
+            className="sr-only"
+            onChange={onUploadAnalyze}
+            disabled={uploading}
+          />
         </div>
       </div>
 
       {uploadLabel ? (
         <p className="text-xs text-violet-300/90">
           Showing uploaded analysis: <span className="font-medium">{uploadLabel}</span>
+        </p>
+      ) : null}
+
+      {uploadSuccess ? (
+        <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+          {uploadSuccess}
         </p>
       ) : null}
 
@@ -203,13 +253,21 @@ export function ComputerVisionAnalysis() {
       {/* Live camera */}
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-gray-800 bg-black">
-          <video
-            ref={videoRef}
-            className="h-full w-full object-cover"
-            playsInline
-            muted
-            autoPlay
-          />
+          {uploadPreview && !running ? (
+            <img
+              src={uploadPreview}
+              alt="Uploaded preview"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+              autoPlay
+            />
+          )}
           <canvas ref={canvasRef} className="hidden" aria-hidden />
           <canvas ref={captureCanvasRef} className="hidden" aria-hidden />
         </div>

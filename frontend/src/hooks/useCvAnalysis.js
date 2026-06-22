@@ -28,6 +28,7 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const inFlightRef = useRef(false);
+  const uploadModeRef = useRef(false);
   const abortRef = useRef(null);
   const timerRef = useRef(null);
   const modeRef = useRef(preprocessMode);
@@ -43,7 +44,7 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
   const analyzeOnce = useCallback(async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas || inFlightRef.current) return;
+    if (!video || !canvas || inFlightRef.current || uploadModeRef.current) return;
 
     const blob = await captureFrame(video, canvas);
     if (!blob) return;
@@ -70,9 +71,12 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
   }, []);
 
   const analyzeFile = useCallback(async (file) => {
-    if (!file || inFlightRef.current) return null;
-    inFlightRef.current = true;
+    if (!file) return null;
+
+    // Upload takes priority over the live camera loop.
+    uploadModeRef.current = true;
     abortRef.current?.abort();
+    inFlightRef.current = true;
     abortRef.current = new AbortController();
     try {
       const data = await cvAnalyze(file, modeRef.current, abortRef.current.signal);
@@ -90,6 +94,7 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
       return null;
     } finally {
       inFlightRef.current = false;
+      uploadModeRef.current = false;
     }
   }, []);
 
@@ -149,6 +154,7 @@ export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_IN
     running,
     error,
     setRunning,
+    setError,
     analyzeOnce,
     analyzeFile,
   };

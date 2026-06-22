@@ -41,6 +41,14 @@ from database import (
 router = APIRouter(prefix="/cv", tags=["computer-vision"])
 
 _MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+_ALLOWED_CONTENT_TYPES = {
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/pjpeg",
+}
+_ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 def _session_key(request: Request) -> str:
@@ -50,14 +58,34 @@ def _session_key(request: Request) -> str:
   return request.headers.get("X-CV-Session", "anonymous")
 
 
-def _decode(raw: bytes) -> np.ndarray:
+def _decode(raw: bytes, filename: str | None = None, content_type: str | None = None) -> np.ndarray:
   if not raw:
     raise HTTPException(status_code=400, detail="Empty file body.")
   if len(raw) > _MAX_UPLOAD_BYTES:
     raise HTTPException(status_code=413, detail="Image too large (max 5 MB).")
+
+  ctype = (content_type or "").split(";", 1)[0].strip().lower()
+  if ctype and ctype not in _ALLOWED_CONTENT_TYPES:
+    raise HTTPException(
+      status_code=415,
+      detail="Unsupported image type. Use JPG, JPEG, PNG, or WEBP.",
+    )
+
+  ext = ""
+  if filename and "." in filename:
+    ext = filename[filename.rfind(".") :].lower()
+  if ext and ext not in _ALLOWED_EXTENSIONS:
+    raise HTTPException(
+      status_code=415,
+      detail="Unsupported file extension. Use JPG, JPEG, PNG, or WEBP.",
+    )
+
   image = cv2.imdecode(np.frombuffer(raw, dtype=np.uint8), cv2.IMREAD_COLOR)
   if image is None:
-    raise HTTPException(status_code=400, detail="Could not decode image (use JPEG or PNG).")
+    raise HTTPException(
+      status_code=400,
+      detail="Could not decode image content (corrupt or unsupported format).",
+    )
   return image
 
 
@@ -91,7 +119,7 @@ async def analyze(
   frame-to-frame topics (optical flow, tracking).
   """
   raw = await file.read()
-  original = _decode(raw)
+  original = _decode(raw, filename=file.filename, content_type=file.content_type)
 
   mode = normalize_mode(preprocess_mode)
   filtered = apply_preprocess(original, mode) if mode != "none" else original
@@ -171,7 +199,8 @@ async def match(
       detail=f"No reference image stored for '{class_name}'. Upload one first.",
     )
   reference = _decode(bytes(ref_bytes))
-  current = _decode(await file.read())
+  upload_raw = await file.read()
+  current = _decode(upload_raw, filename=file.filename, content_type=file.content_type)
 
   result = match_images(reference, current)
   return {
@@ -203,7 +232,8 @@ async def homography(
       detail=f"No reference image stored for '{class_name}'. Upload one first.",
     )
   reference = _decode(bytes(ref_bytes))
-  current = _decode(await file.read())
+  upload_raw = await file.read()
+  current = _decode(upload_raw, filename=file.filename, content_type=file.content_type)
 
   result = estimate_homography(reference, current)
   warped_b64 = None
@@ -231,7 +261,8 @@ async def events(
 ) -> dict[str, Any]:
   """Phase 8: classify Added/Removed/Moved from YOLO + optical flow + tracking."""
   model = _get_yolo(request)
-  image = _decode(await file.read())
+  upload_raw = await file.read()
+  image = _decode(upload_raw, filename=file.filename, content_type=file.content_type)
 
   # YOLO detections (read-only inference; does not change inventory here).
   results = model(image, verbose=False)
@@ -294,8 +325,7 @@ async def upload_reference(
   """Store/replace the reference image for a food class (Supabase Storage)."""
   client = _get_supabase()
   raw = await file.read()
-  # Re-encode to JPEG to normalize whatever the client uploaded.
-  image = _decode(raw)
+  image = _decode(raw, filename=file.filename, content_type=file.content_type)
   ok, encoded = cv2.imencode(".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
   if not ok:
     raise HTTPException(status_code=400, detail="Could not encode reference image.")
