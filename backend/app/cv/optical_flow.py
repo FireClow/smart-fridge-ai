@@ -38,6 +38,13 @@ def calc_optical_flow(prev_gray: np.ndarray, curr_gray: np.ndarray) -> dict:
     avg_magnitude: mean Euclidean displacement of tracked points.
     point_count: number of successfully tracked points.
   """
+  if prev_gray.shape != curr_gray.shape:
+    curr_gray = cv2.resize(curr_gray, (prev_gray.shape[1], prev_gray.shape[0]))
+  if not prev_gray.flags["C_CONTIGUOUS"]:
+    prev_gray = np.ascontiguousarray(prev_gray)
+  if not curr_gray.flags["C_CONTIGUOUS"]:
+    curr_gray = np.ascontiguousarray(curr_gray)
+
   prev_pts = cv2.goodFeaturesToTrack(prev_gray, mask=None, **_FEATURE_PARAMS)
   if prev_pts is None:
     return {"vectors": [], "avg_magnitude": 0.0, "point_count": 0}
@@ -64,3 +71,14 @@ def calc_optical_flow(prev_gray: np.ndarray, curr_gray: np.ndarray) -> dict:
     "avg_magnitude": round(avg_magnitude, 3),
     "point_count": len(vectors),
   }
+
+
+def still_second_frame(original: np.ndarray, processed: np.ndarray) -> np.ndarray:
+  """Build a second BGR frame for still-image LK demos (upload mode)."""
+  if original.shape != processed.shape:
+    processed = cv2.resize(processed, (original.shape[1], original.shape[0]))
+  if not np.array_equal(original, processed):
+    return processed
+  h, w = original.shape[:2]
+  matrix = np.float32([[1, 0, 4], [0, 1, 3]])
+  return cv2.warpAffine(original, matrix, (w, h), borderMode=cv2.BORDER_REPLICATE)

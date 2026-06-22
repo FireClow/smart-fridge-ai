@@ -94,3 +94,21 @@ All routes are under `/api/cv` ([backend/routers/cv.py](../backend/routers/cv.py
   from Settings and the CV page, and is applied before YOLO as well.
 - Stereo/3D is a single-camera demonstration only (no calibrated rig), included
   for academic completeness of topics 10-11.
+
+## OpenCV experiment metrics (from YOLO dataset)
+
+You do **not** need a separate dataset for classical CV. Re-use YOLO images +
+bounding-box labels and run:
+
+```powershell
+python scripts/eval_cv_opencv.py --data dataset_2/data.yaml --split valid --max-images 80
+```
+
+Outputs:
+
+- `results/cv_experiment/opencv_metrics.json` — raw numbers
+- `results/cv_experiment/opencv_report.md` — tables for your report
+
+Metrics include preprocessing (PSNR, ORB count), Harris/Shi-Tomasi corners,
+ORB match discrimination, optical-flow error, homography inlier ratio, plus
+YOLO mAP from `runs/detect/` as reference.

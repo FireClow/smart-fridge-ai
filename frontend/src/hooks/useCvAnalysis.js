@@ -1,161 +1,113 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ANALYSIS_SOURCE, logAnalysisSource } from "../lib/cvAnalysisSource.js";
 import { cvAnalyze } from "../services/api.js";
 
-const DEFAULT_INTERVAL = 1500;
-
-function captureFrame(video, canvas) {
-  const w = video.videoWidth;
-  const h = video.videoHeight;
-  if (!w || !h) return null;
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.drawImage(video, 0, 0, w, h);
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.9);
-  });
-}
-
 /**
- * Drives a camera frame loop into POST /api/cv/analyze for the CV page.
- * Returns refs to attach to <video>/<canvas>, the latest analysis result,
- * and controls. Optical flow + tracking rely on consecutive frames, so the
- * loop must keep sending frames from the same browser session.
+ * Upload-only CV analysis — no webcam or realtime loop.
  */
-export function useCvAnalysis({ preprocessMode = "none", intervalMs = DEFAULT_INTERVAL } = {}) {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-  const inFlightRef = useRef(false);
-  const uploadModeRef = useRef(false);
+export function useCvAnalysis({ preprocessMode = "none" } = {}) {
+  const uploadedFileRef = useRef(null);
+  const requestGenRef = useRef(0);
   const abortRef = useRef(null);
-  const timerRef = useRef(null);
   const modeRef = useRef(preprocessMode);
+  const lastPreprocessRef = useRef(null);
 
   const [result, setResult] = useState(null);
-  const [running, setRunning] = useState(true);
   const [error, setError] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [hasImage, setHasImage] = useState(false);
 
   useEffect(() => {
     modeRef.current = preprocessMode;
   }, [preprocessMode]);
 
-  const analyzeOnce = useCallback(async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || inFlightRef.current || uploadModeRef.current) return;
-
-    const blob = await captureFrame(video, canvas);
-    if (!blob) return;
-
-    inFlightRef.current = true;
+  const runAnalysis = useCallback(async (file) => {
+    const reqId = ++requestGenRef.current;
+    setAnalyzing(true);
+    setError(null);
     abortRef.current?.abort();
     abortRef.current = new AbortController();
     try {
-      const file = new File([blob], "frame.jpg", { type: "image/jpeg" });
-      const data = await cvAnalyze(file, modeRef.current, abortRef.current.signal);
-      setResult(data);
-      setError(null);
-    } catch (e) {
-      if (
-        e?.name !== "CanceledError" &&
-        e?.code !== "ERR_CANCELED" &&
-        !e?.message?.includes("canceled")
-      ) {
-        setError(e?.message || "CV analysis failed");
-      }
-    } finally {
-      inFlightRef.current = false;
-    }
-  }, []);
-
-  const analyzeFile = useCallback(async (file) => {
-    if (!file) return null;
-
-    // Upload takes priority over the live camera loop.
-    uploadModeRef.current = true;
-    abortRef.current?.abort();
-    inFlightRef.current = true;
-    abortRef.current = new AbortController();
-    try {
-      const data = await cvAnalyze(file, modeRef.current, abortRef.current.signal);
+      logAnalysisSource(ANALYSIS_SOURCE.UPLOAD);
+      const data = await cvAnalyze(
+        file,
+        modeRef.current,
+        abortRef.current.signal,
+        ANALYSIS_SOURCE.UPLOAD,
+      );
+      if (reqId !== requestGenRef.current) return null;
       setResult(data);
       setError(null);
       return data;
     } catch (e) {
+      if (reqId !== requestGenRef.current) return null;
       if (
         e?.name !== "CanceledError" &&
         e?.code !== "ERR_CANCELED" &&
         !e?.message?.includes("canceled")
       ) {
         setError(e?.message || "CV analysis failed");
+        setResult(null);
       }
       return null;
     } finally {
-      inFlightRef.current = false;
-      uploadModeRef.current = false;
+      if (reqId === requestGenRef.current) setAnalyzing(false);
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 } },
-          audio: false,
-        });
-        if (cancelled) {
-          for (const t of stream.getTracks()) t.stop();
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-        }
-      } catch (e) {
-        setError(
-          e?.name === "NotAllowedError"
-            ? "Camera permission denied."
-            : "Could not open camera.",
-        );
-      }
-    })();
+  const analyzeFile = useCallback(
+    async (file) => {
+      if (!file) return null;
+      uploadedFileRef.current = file;
+      setHasImage(true);
+      setResult(null);
+      return runAnalysis(file);
+    },
+    [runAnalysis],
+  );
 
-    return () => {
-      cancelled = true;
-      const s = streamRef.current;
-      if (s) for (const t of s.getTracks()) t.stop();
-      streamRef.current = null;
-      abortRef.current?.abort();
-    };
+  const clearImage = useCallback(() => {
+    uploadedFileRef.current = null;
+    setHasImage(false);
+    setResult(null);
+    setError(null);
+    lastPreprocessRef.current = null;
+    requestGenRef.current += 1;
+    abortRef.current?.abort();
+  }, []);
+
+  const getAnalysisSourceFile = useCallback(async () => {
+    if (!uploadedFileRef.current) return null;
+    logAnalysisSource(ANALYSIS_SOURCE.UPLOAD);
+    return uploadedFileRef.current;
   }, []);
 
   useEffect(() => {
-    if (!running) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return undefined;
+    if (!hasImage || !uploadedFileRef.current) {
+      lastPreprocessRef.current = null;
+      return;
     }
-    timerRef.current = setInterval(() => {
-      if (document.visibilityState === "visible") void analyzeOnce();
-    }, intervalMs);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [running, intervalMs, analyzeOnce]);
+    if (lastPreprocessRef.current === null) {
+      lastPreprocessRef.current = preprocessMode;
+      return;
+    }
+    if (lastPreprocessRef.current === preprocessMode) return;
+    lastPreprocessRef.current = preprocessMode;
+    void runAnalysis(uploadedFileRef.current);
+  }, [preprocessMode, hasImage, runAnalysis]);
+
+  const panelLoading = analyzing || (hasImage && !result && !error);
 
   return {
-    videoRef,
-    canvasRef,
     result,
     metrics: result?.metrics ?? null,
-    running,
     error,
-    setRunning,
     setError,
-    analyzeOnce,
+    analyzing,
+    panelLoading,
+    hasImage,
     analyzeFile,
+    clearImage,
+    getAnalysisSourceFile,
   };
 }

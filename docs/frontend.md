@@ -17,6 +17,21 @@ cp .env.example .env
 
 Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` (publishable/anon key from Supabase Dashboard). Leave `VITE_API_URL` empty in dev (Vite proxies `/api` → FastAPI).
 
+You can also put `SUPABASE_URL` + `SUPABASE_KEY` in the **repo root** `.env` — the Vite build reads both (handy for Vercel if you already set backend-style names).
+
+### Vercel deploy
+
+In Vercel → **Environment Variables** (Production), set **either**:
+
+| Option A (recommended) | Option B (same as root `.env`) |
+|--------------------------|--------------------------------|
+| `VITE_SUPABASE_URL` | `SUPABASE_URL` |
+| `VITE_SUPABASE_KEY` | `SUPABASE_KEY` (anon/publishable, not service role) |
+
+Then **Redeploy** (disable build cache if the old bundle still shows "not configured").
+
+Optional: `VITE_API_URL` = your hosted FastAPI URL (Render/Railway) without a `/api` suffix.
+
 ## Run
 
 **Butuh 2 proses:** frontend (Vite) + backend (FastAPI). Tanpa API, proxy `/api` gagal (`ECONNREFUSED 127.0.0.1:8001`).

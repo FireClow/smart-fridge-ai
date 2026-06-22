@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { SUPABASE_CONFIG_HINT } from "../lib/supabaseEnv.js";
 import { supabase } from "../services/supabase.js";
 
 const AuthContext = createContext(null);
@@ -42,14 +43,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signIn = useCallback(async (email, password) => {
-    if (!supabase) throw new Error("Supabase is not configured.");
+    if (!supabase) throw new Error(`Supabase is not configured. ${SUPABASE_CONFIG_HINT}`);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data;
   }, []);
 
   const signUp = useCallback(async (email, password, displayName) => {
-    if (!supabase) throw new Error("Supabase is not configured.");
+    if (!supabase) throw new Error(`Supabase is not configured. ${SUPABASE_CONFIG_HINT}`);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -62,7 +63,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const registerAndSignIn = useCallback(async (email, password, displayName) => {
-    if (!supabase) throw new Error("Supabase is not configured.");
+    if (!supabase) throw new Error(`Supabase is not configured. ${SUPABASE_CONFIG_HINT}`);
 
     // Register account first.
     const { error: signUpError } = await supabase.auth.signUp({

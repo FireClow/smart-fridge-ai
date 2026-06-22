@@ -19,7 +19,7 @@ from backend.app.cv import orb_features as orb_mod
 from backend.app.cv.events import detect_events
 from backend.app.cv.homography import estimate_homography
 from backend.app.cv.matching import match_images
-from backend.app.cv.optical_flow import calc_optical_flow, to_gray
+from backend.app.cv.optical_flow import calc_optical_flow, still_second_frame, to_gray
 from backend.app.cv.overlays import (
   draw_corner_comparison,
   draw_flow_vectors,
@@ -29,6 +29,7 @@ from backend.app.cv.overlays import (
 )
 from backend.app.cv.preprocessing import apply_preprocess, normalize_mode
 from backend.app.cv.session_state import get_session, reset_session
+from backend.app.cv.tracking import track_still_pair
 from backend.app.limiter import limiter
 from database import (
   connect_to_supabase,
@@ -41,6 +42,7 @@ from database import (
 router = APIRouter(prefix="/cv", tags=["computer-vision"])
 
 _MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+_MAX_ANALYZE_DIM = 1280
 _ALLOWED_CONTENT_TYPES = {
   "image/jpeg",
   "image/jpg",
@@ -89,6 +91,20 @@ def _decode(raw: bytes, filename: str | None = None, content_type: str | None = 
   return image
 
 
+def _downscale_for_cv(image: np.ndarray, max_dim: int = _MAX_ANALYZE_DIM) -> np.ndarray:
+  """Keep CV overlays responsive for large phone-camera uploads."""
+  h, w = image.shape[:2]
+  longest = max(h, w)
+  if longest <= max_dim:
+    return image
+  scale = max_dim / longest
+  return cv2.resize(
+    image,
+    (max(1, int(w * scale)), max(1, int(h * scale))),
+    interpolation=cv2.INTER_AREA,
+  )
+
+
 def _get_yolo(request: Request):
   model = getattr(request.app.state, "yolo", None)
   if model is None:
@@ -112,6 +128,7 @@ async def analyze(
   request: Request,
   file: UploadFile = File(...),
   preprocess_mode: str = Query("none"),
+  source_mode: str = Query("webcam"),
 ) -> dict[str, Any]:
   """Run filtering + Harris/Shi-Tomasi + ORB + optical flow + tracking.
 
@@ -119,10 +136,11 @@ async def analyze(
   frame-to-frame topics (optical flow, tracking).
   """
   raw = await file.read()
-  original = _decode(raw, filename=file.filename, content_type=file.content_type)
+  original = _downscale_for_cv(_decode(raw, filename=file.filename, content_type=file.content_type))
 
   mode = normalize_mode(preprocess_mode)
   filtered = apply_preprocess(original, mode) if mode != "none" else original
+  is_upload = source_mode.strip().lower() == "upload"
 
   # Phase 2: Harris + Shi-Tomasi corners (+ NMS inside corners module).
   corner_data = corners_mod.compare_corners(filtered)
@@ -133,29 +151,57 @@ async def analyze(
   orb_vis = draw_keypoints(filtered, keypoints)
   descriptor_count = int(descriptors.shape[0]) if descriptors is not None else 0
 
-  # Phase 6 + 7: optical flow and feature tracking use session state.
+  # Phase 6 + 7: optical flow and feature tracking need consecutive webcam frames.
   state = get_session(_session_key(request))
   curr_gray = to_gray(filtered)
 
+  flow_unavailable = False
+  tracking_unavailable = False
+  flow_message = None
+  tracking_message = None
+
   flow = {"vectors": [], "avg_magnitude": 0.0, "point_count": 0}
-  if state.prev_gray is not None and state.prev_gray.shape == curr_gray.shape:
-    flow = calc_optical_flow(state.prev_gray, curr_gray)
-  flow_vis = draw_flow_vectors(filtered, flow["vectors"])
+  flow_vis = None
+  track_data = {"tracks": [], "active_tracks": 0}
+  track_vis = None
 
-  track_data = state.tracker.update(filtered)
-  track_vis = draw_tracks(filtered, track_data["tracks"])
+  if is_upload:
+    # Still-image demo: original → filtered (or micro-shift when filter is none).
+    state.prev_gray = None
+    try:
+      second_frame = still_second_frame(original, filtered)
+      prev_gray = to_gray(original)
+      curr_gray = to_gray(second_frame)
+      flow = calc_optical_flow(prev_gray, curr_gray)
+      flow_vis = draw_flow_vectors(filtered, flow["vectors"])
 
-  state.prev_gray = curr_gray
+      track_data = track_still_pair(original, second_frame)
+      track_vis = draw_tracks(second_frame, track_data["tracks"])
+    except cv2.error as exc:
+      flow_unavailable = True
+      tracking_unavailable = True
+      flow_message = f"Optical flow failed on upload: {exc}"
+      tracking_message = flow_message
+  else:
+    flow = {"vectors": [], "avg_magnitude": 0.0, "point_count": 0}
+    if state.prev_gray is not None and state.prev_gray.shape == curr_gray.shape:
+      flow = calc_optical_flow(state.prev_gray, curr_gray)
+    flow_vis = draw_flow_vectors(filtered, flow["vectors"])
+
+    track_data = state.tracker.update(filtered)
+    track_vis = draw_tracks(filtered, track_data["tracks"])
+    state.prev_gray = curr_gray
 
   metrics = {
     "harris_count": corner_data["harris_count"],
     "shi_tomasi_count": corner_data["shi_tomasi_count"],
     "orb_keypoints": len(keypoints),
     "orb_descriptors": descriptor_count,
-    "optical_flow_magnitude": flow["avg_magnitude"],
-    "flow_point_count": flow["point_count"],
-    "active_tracks": track_data["active_tracks"],
+    "optical_flow_magnitude": None if flow_unavailable else flow["avg_magnitude"],
+    "flow_point_count": None if flow_unavailable else flow["point_count"],
+    "active_tracks": None if tracking_unavailable else track_data["active_tracks"],
     "preprocess_mode": mode,
+    "source_mode": "upload" if is_upload else "webcam",
   }
   state.last_metrics = metrics
 
@@ -165,8 +211,12 @@ async def analyze(
     "filtered_image_base64": encode_jpeg_base64(filtered) if mode != "none" else None,
     "corner_image_base64": encode_jpeg_base64(corner_vis),
     "orb_image_base64": encode_jpeg_base64(orb_vis),
-    "flow_image_base64": encode_jpeg_base64(flow_vis),
-    "tracking_image_base64": encode_jpeg_base64(track_vis),
+    "flow_image_base64": encode_jpeg_base64(flow_vis) if flow_vis is not None else None,
+    "tracking_image_base64": encode_jpeg_base64(track_vis) if track_vis is not None else None,
+    "flow_unavailable": flow_unavailable,
+    "tracking_unavailable": tracking_unavailable,
+    "flow_message": flow_message,
+    "tracking_message": tracking_message,
   }
 
 

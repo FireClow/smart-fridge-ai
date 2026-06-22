@@ -89,11 +89,11 @@ function multipartConfig(extra = {}) {
   };
 }
 
-export async function cvAnalyze(file, preprocessMode = "none", signal) {
+export async function cvAnalyze(file, preprocessMode = "none", signal, sourceMode = "webcam") {
   const form = new FormData();
   form.append("file", file, file.name || "frame.jpg");
   const { data } = await http.post(apiPath("/api/cv/analyze"), form, {
-    params: { preprocess_mode: preprocessMode },
+    params: { preprocess_mode: preprocessMode, source_mode: sourceMode },
     ...multipartConfig(),
     signal,
   });

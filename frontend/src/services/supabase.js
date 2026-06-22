@@ -1,10 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
+import { getSupabaseConfig, isSupabaseConfigured } from "../lib/supabaseEnv.js";
 
-const url = import.meta.env.VITE_SUPABASE_URL || "";
-const key = import.meta.env.VITE_SUPABASE_KEY || "";
+const { url, key } = getSupabaseConfig();
 
-export const supabase =
-  url && key ? createClient(url, key) : null;
+export const supabase = isSupabaseConfigured() ? createClient(url, key) : null;
 
 const isDev = import.meta.env.DEV;
 

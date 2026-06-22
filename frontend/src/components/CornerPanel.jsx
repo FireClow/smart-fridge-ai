@@ -3,13 +3,17 @@
  * (with Non-Maximum Suppression inside the backend corners module).
  * Red = Harris, Green = Shi-Tomasi.
  */
-export function CornerPanel({ image, harrisCount, shiTomasiCount }) {
+export function CornerPanel({ image, harrisCount, shiTomasiCount, loading = false }) {
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-900/50 p-4">
       <h3 className="mb-3 font-display text-sm font-semibold text-white">
         Corner detection (Harris vs Shi-Tomasi)
       </h3>
-      {image ? (
+      {loading ? (
+        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-700 text-xs text-gray-400">
+          Analyzing uploaded image…
+        </div>
+      ) : image ? (
         <img
           src={`data:image/jpeg;base64,${image}`}
           alt="Detected corners"

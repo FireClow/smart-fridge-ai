@@ -49,6 +49,8 @@ class FeatureTracker:
   def update(self, image: np.ndarray) -> dict:
     """Advance the tracker by one frame and return trajectory data."""
     gray = to_gray(image)
+    if not gray.flags["C_CONTIGUOUS"]:
+      gray = np.ascontiguousarray(gray)
 
     if self.prev_gray is None or not self.tracks:
       self.prev_gray = gray
@@ -56,7 +58,15 @@ class FeatureTracker:
       self._seed(gray)
       return self._summary()
 
+    if gray.shape != self.prev_gray.shape:
+      gray = cv2.resize(gray, (self.prev_gray.shape[1], self.prev_gray.shape[0]))
+
     prev_pts = np.float32([t["points"][-1] for t in self.tracks]).reshape(-1, 1, 2)
+    if prev_pts.size == 0:
+      self.prev_gray = gray
+      self._seed(gray)
+      return self._summary()
+
     next_pts, status, _err = cv2.calcOpticalFlowPyrLK(
       self.prev_gray, gray, prev_pts, None, **_LK_PARAMS
     )
@@ -89,3 +99,12 @@ class FeatureTracker:
         for t in self.tracks
       ],
     }
+
+
+def track_still_pair(first: np.ndarray, second: np.ndarray) -> dict:
+  """Two-step tracking demo for a single uploaded image (frame A → frame B)."""
+  if first.shape != second.shape:
+    second = cv2.resize(second, (first.shape[1], first.shape[0]))
+  tracker = FeatureTracker()
+  tracker.update(first)
+  return tracker.update(second)

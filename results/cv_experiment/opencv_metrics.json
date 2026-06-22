@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-06-22T14:05:10.239731+00:00",
+  "dataset": "dataset_2/data.yaml",
+  "split": "valid",
+  "num_images": 80,
+  "num_yolo_crops": 200,
+  "opencv": {
+    "preprocessing": {
+      "none": {
+        "mean_orb_keypoints": 500.0,
+        "mean_psnr_vs_original": 99.0
+      },
+      "gaussian": {
+        "mean_orb_keypoints": 499.2,
+        "mean_psnr_vs_original": 36.64
+      },
+      "bilateral": {
+        "mean_orb_keypoints": 499.6,
+        "mean_psnr_vs_original": 36.98
+      },
+      "clahe": {
+        "mean_orb_keypoints": 500.0,
+        "mean_psnr_vs_original": 21.29
+      }
+    },
+    "corners": {
+      "mean_harris_corners": 1284.6,
+      "mean_shi_tomasi_corners": 200.0,
+      "shi_to_harris_ratio": 0.156
+    },
+    "orb_matching": {
+      "mean_positive_match_score": 0.212,
+      "mean_negative_match_score": 0.019,
+      "pairwise_comparisons": 150,
+      "pairwise_discrimination_accuracy_pct": 18.7,
+      "threshold_match_score": 0.08,
+      "threshold_classification_accuracy_pct": 44.6,
+      "match_score_gap_positive_minus_negative": 0.193,
+      "note": "Positive = YOLO crop vs lightly rotated/scaled crop. Negative = different food-class crops (same pipeline as /api/cv/match)."
+    },
+    "optical_flow": {
+      "synthetic_shift_px": {
+        "dx": 8,
+        "dy": 4,
+        "expected_magnitude": 8.944
+      },
+      "mean_flow_magnitude": 8.981,
+      "mean_abs_error_px": 0.039,
+      "flow_accuracy_pct": 99.6,
+      "mean_tracked_points": 119.7
+    },
+    "homography": {
+      "mean_match_score_after_transform": 0.706,
+      "mean_homography_inlier_ratio": 0.991,
+      "transform": "rotate_5deg_scale_1.03"
+    }
+  },
+  "yolo_reference": {
+    "run": "train-6",
+    "epoch": 39,
+    "mAP50": 0.9726,
+    "mAP50_95": 0.628,
+    "precision": 0.9554,
+    "recall": 0.971
+  }
+}

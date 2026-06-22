@@ -8,7 +8,7 @@ import { cvHomography, cvMatch, uploadReferenceImage } from "../services/api.js"
  * Workflow: pick a food class, store a reference image, then match the current
  * capture against it and optionally estimate homography + warp to frontal view.
  */
-export function MatchPanel({ classNames = [], captureFrame, onScore }) {
+export function MatchPanel({ classNames = [], captureFrame, preferUpload = false, onScore }) {
   const [className, setClassName] = useState("");
   const [matchResult, setMatchResult] = useState(null);
   const [homographyResult, setHomographyResult] = useState(null);
@@ -122,7 +122,7 @@ export function MatchPanel({ classNames = [], captureFrame, onScore }) {
           onClick={() => void runMatch()}
           className="rounded-lg border border-cyan-600/50 bg-cyan-600/20 px-3 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-600/30 disabled:opacity-40"
         >
-          {busy ? "Working…" : "Match current frame"}
+          {busy ? "Working…" : preferUpload ? "Match uploaded image" : "Match current frame"}
         </button>
 
         <button

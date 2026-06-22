@@ -2,11 +2,15 @@
  * Course topic: ORB descriptors (Oriented FAST + Rotated BRIEF).
  * Shows rich keypoints (size + orientation) and counts.
  */
-export function OrbPanel({ image, keypointCount, descriptorCount }) {
+export function OrbPanel({ image, keypointCount, descriptorCount, loading = false }) {
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-900/50 p-4">
       <h3 className="mb-3 font-display text-sm font-semibold text-white">ORB features</h3>
-      {image ? (
+      {loading ? (
+        <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-700 text-xs text-gray-400">
+          Analyzing uploaded image…
+        </div>
+      ) : image ? (
         <img
           src={`data:image/jpeg;base64,${image}`}
           alt="ORB keypoints"

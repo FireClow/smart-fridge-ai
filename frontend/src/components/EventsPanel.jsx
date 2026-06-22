@@ -17,7 +17,7 @@ function formatTime(value) {
   }
 }
 
-export function EventsPanel({ events = [], busy, onDetect }) {
+export function EventsPanel({ events = [], busy, onDetect, uploadOnly = false }) {
   return (
     <section className="rounded-2xl border border-gray-800 bg-gray-900/50 p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -34,7 +34,9 @@ export function EventsPanel({ events = [], busy, onDetect }) {
 
       {events.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-700 py-6 text-center text-xs text-gray-500">
-          No events yet. Add or remove an item in front of the camera, then detect.
+          {uploadOnly
+            ? "No events yet. Upload an image with food items, then click Detect events."
+            : "No events yet. Add or remove an item in front of the camera, then detect."}
         </p>
       ) : (
         <ul className="space-y-2">
