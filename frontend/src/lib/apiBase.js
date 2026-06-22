@@ -9,7 +9,8 @@ export function getApiOrigin() {
   }
   if (!raw) {
     if (import.meta.env.DEV) return "";
-    return "http://localhost:8000";
+    // Vercel Services: backend is mounted at /_/backend (see vercel.json).
+    return "/_/backend";
   }
   return raw;
 }
