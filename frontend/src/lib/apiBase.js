@@ -1,15 +1,21 @@
 /**
- * API origin for fetch(). In Vite dev, empty string = same origin so /api/* is proxied to FastAPI.
- * Strips a trailing `/api` from VITE_API_URL so paths like `/api/scan/image` are not doubled.
+ * API origin for Axios/fetch. Empty string = same origin (`/api/*` on the current host).
+ * Strips a trailing `/api` from VITE_API_URL so `/api/scan/image` is never doubled.
  */
-export function getApiOrigin() {
-  let raw = (import.meta.env.VITE_API_URL ?? "").trim().replace(/\/+$/, "");
+export function normalizeApiOrigin(value) {
+  let raw = String(value ?? "").trim().replace(/\/+$/, "");
+  if (!raw) return "";
   if (raw.toLowerCase().endsWith("/api")) {
     raw = raw.slice(0, -4).replace(/\/+$/, "");
   }
+  return raw;
+}
+
+export function getApiOrigin() {
+  const raw = normalizeApiOrigin(import.meta.env.VITE_API_URL);
   if (!raw) {
     // Dev: Vite proxies /api → FastAPI (local :8001, Replit :8000).
-    // Replit deploy / same-origin: empty origin → relative /api/* on one host.
+    // Replit deploy / same-origin: relative /api/* on one host.
     // Vercel-only frontend: set VITE_API_URL to external API (Render, Railway, etc.).
     return "";
   }

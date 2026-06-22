@@ -13,6 +13,11 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+function isHtmlResponse(response) {
+  const type = response?.headers?.["content-type"] ?? "";
+  return typeof type === "string" && type.includes("text/html");
+}
+
 http.interceptors.response.use(
   (res) => res,
   (error) => {
@@ -23,6 +28,9 @@ http.interceptors.response.use(
     if (isNetworkError) {
       message =
         "Backend API tidak berjalan. Buka terminal baru di root project dan jalankan: .\\scripts\\start-api.ps1 (menunggu ~20 detik, port 8001).";
+    } else if (isHtmlResponse(error.response)) {
+      message =
+        "API mengembalikan HTML, bukan JSON. Di Vercel set VITE_API_URL ke host FastAPI (Render/Railway). Di Replit biarkan kosong (same-origin /api).";
     }
     if (data?.detail) {
       message =

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ANALYSIS_SOURCE, logAnalysisSource } from "../lib/cvAnalysisSource.js";
-import { cvAnalyze } from "../services/api.js";
+import { cvAnalyze, cvReset } from "../services/api.js";
 
 /**
  * Upload-only CV analysis — no webcam or realtime loop.
@@ -74,6 +74,7 @@ export function useCvAnalysis({ preprocessMode = "none" } = {}) {
     lastPreprocessRef.current = null;
     requestGenRef.current += 1;
     abortRef.current?.abort();
+    void cvReset().catch(() => {});
   }, []);
 
   const getAnalysisSourceFile = useCallback(async () => {

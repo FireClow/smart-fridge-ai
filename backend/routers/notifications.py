@@ -15,7 +15,10 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 def get_supabase():
-  return connect_to_supabase()
+  try:
+    return connect_to_supabase()
+  except (ValueError, ConnectionError) as exc:
+    raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("", response_model=list[ExpirationNotification])

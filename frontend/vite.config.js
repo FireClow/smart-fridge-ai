@@ -27,8 +27,30 @@ function resolveSupabaseEnv(mode) {
   return { url, key };
 }
 
+/** Same-origin /api on Replit deploy; external host on Vercel + Render split. */
+function resolveApiEnv(mode) {
+  const fromRoot = loadEnv(mode, rootDir, "");
+  const fromFrontend = loadEnv(mode, __dirname, "");
+  const env = { ...fromRoot, ...fromFrontend, ...process.env };
+
+  if (
+    process.env.REPLIT_DEPLOYMENT ||
+    process.env.REPL_ID ||
+    env.REPLIT_DEPLOYMENT
+  ) {
+    return "";
+  }
+
+  let url = (env.VITE_API_URL || env.API_URL || "").trim().replace(/\/+$/, "");
+  if (url.toLowerCase().endsWith("/api")) {
+    url = url.slice(0, -4).replace(/\/+$/, "");
+  }
+  return url;
+}
+
 export default defineConfig(({ mode }) => {
   const { url: supabaseUrl, key: supabaseKey } = resolveSupabaseEnv(mode);
+  const apiOrigin = resolveApiEnv(mode);
   const apiPort = process.env.API_PORT || "8001";
   const devPort = process.env.REPL_ID ? 5000 : 5173;
 
@@ -38,6 +60,7 @@ export default defineConfig(({ mode }) => {
     define: {
       "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "import.meta.env.VITE_SUPABASE_KEY": JSON.stringify(supabaseKey),
+      "import.meta.env.VITE_API_URL": JSON.stringify(apiOrigin),
     },
     server: {
       port: Number(devPort),

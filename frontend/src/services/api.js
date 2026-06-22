@@ -1,30 +1,31 @@
 /**
  * API facade — uses Axios via http.js
  */
+import { API } from "../lib/apiRoutes.js";
 import { http, apiPath } from "./http.js";
 
 export async function fetchInventory() {
-  const { data } = await http.get(apiPath("/api/inventory"));
+  const { data } = await http.get(apiPath(API.inventory));
   return data;
 }
 
 export async function fetchLogs(limit = 20) {
-  const { data } = await http.get(apiPath("/api/logs"), { params: { limit } });
+  const { data } = await http.get(apiPath(API.logs), { params: { limit } });
   return data;
 }
 
 export async function fetchStats() {
-  const { data } = await http.get(apiPath("/api/stats"));
+  const { data } = await http.get(apiPath(API.stats));
   return data;
 }
 
 export async function fetchHealth() {
-  const { data } = await http.get(apiPath("/api/health"));
+  const { data } = await http.get(apiPath(API.health));
   return data;
 }
 
 export async function fetchModelInfo() {
-  const { data } = await http.get(apiPath("/api/model/info"));
+  const { data } = await http.get(apiPath(API.modelInfo));
   return data;
 }
 
@@ -32,7 +33,7 @@ export async function postScanImage(file, confidence = 0.6, signal, preprocessMo
   const form = new FormData();
   form.append("file", file, file.name || "capture.jpg");
   const { data } = await http.post(
-    apiPath("/api/scan/image"),
+    apiPath(API.scanImage),
     form,
     {
       params: { confidence, preprocess_mode: preprocessMode },
@@ -43,25 +44,24 @@ export async function postScanImage(file, confidence = 0.6, signal, preprocessMo
 }
 
 export async function patchInventoryExpiry(itemName, body) {
-  const enc = encodeURIComponent(itemName);
-  const { data } = await http.patch(apiPath(`/api/inventory/${enc}`), body);
+  const { data } = await http.patch(apiPath(API.inventoryItem(itemName)), body);
   return data;
 }
 
 export async function fetchNotifications(unreadOnly = false, limit = 50) {
-  const { data } = await http.get(apiPath("/api/notifications"), {
+  const { data } = await http.get(apiPath(API.notifications), {
     params: { unread_only: unreadOnly, limit },
   });
   return data;
 }
 
 export async function generateNotifications() {
-  const { data } = await http.post(apiPath("/api/notifications/generate"));
+  const { data } = await http.post(apiPath(API.notificationsGenerate));
   return data;
 }
 
 export async function markNotificationRead(id) {
-  const { data } = await http.patch(apiPath(`/api/notifications/${id}/read`));
+  const { data } = await http.patch(apiPath(API.notificationRead(id)));
   return data;
 }
 
@@ -92,7 +92,7 @@ function multipartConfig(extra = {}) {
 export async function cvAnalyze(file, preprocessMode = "none", signal, sourceMode = "webcam") {
   const form = new FormData();
   form.append("file", file, file.name || "frame.jpg");
-  const { data } = await http.post(apiPath("/api/cv/analyze"), form, {
+  const { data } = await http.post(apiPath(API.cvAnalyze), form, {
     params: { preprocess_mode: preprocessMode, source_mode: sourceMode },
     ...multipartConfig(),
     signal,
@@ -101,7 +101,14 @@ export async function cvAnalyze(file, preprocessMode = "none", signal, sourceMod
 }
 
 export async function fetchCvMetrics() {
-  const { data } = await http.get(apiPath("/api/cv/metrics"), {
+  const { data } = await http.get(apiPath(API.cvMetrics), {
+    headers: cvHeaders(),
+  });
+  return data;
+}
+
+export async function cvReset() {
+  const { data } = await http.post(apiPath(API.cvReset), null, {
     headers: cvHeaders(),
   });
   return data;
@@ -110,7 +117,7 @@ export async function fetchCvMetrics() {
 export async function cvMatch(file, className, signal) {
   const form = new FormData();
   form.append("file", file, file.name || "crop.jpg");
-  const { data } = await http.post(apiPath("/api/cv/match"), form, {
+  const { data } = await http.post(apiPath(API.cvMatch), form, {
     params: { class_name: className },
     ...multipartConfig(),
     signal,
@@ -121,7 +128,7 @@ export async function cvMatch(file, className, signal) {
 export async function cvHomography(file, className, warp = false, signal) {
   const form = new FormData();
   form.append("file", file, file.name || "crop.jpg");
-  const { data } = await http.post(apiPath("/api/cv/homography"), form, {
+  const { data } = await http.post(apiPath(API.cvHomography), form, {
     params: { class_name: className, warp },
     ...multipartConfig(),
     signal,
@@ -132,7 +139,7 @@ export async function cvHomography(file, className, warp = false, signal) {
 export async function cvDetectEvents(file, confidence = 0.6, signal) {
   const form = new FormData();
   form.append("file", file, file.name || "frame.jpg");
-  const { data } = await http.post(apiPath("/api/cv/events"), form, {
+  const { data } = await http.post(apiPath(API.cvEvents), form, {
     params: { confidence },
     ...multipartConfig(),
     signal,
@@ -141,7 +148,7 @@ export async function cvDetectEvents(file, confidence = 0.6, signal) {
 }
 
 export async function fetchCvEvents(limit = 50) {
-  const { data } = await http.get(apiPath("/api/cv/events"), {
+  const { data } = await http.get(apiPath(API.cvEvents), {
     params: { limit },
     headers: cvHeaders(),
   });
@@ -151,16 +158,14 @@ export async function fetchCvEvents(limit = 50) {
 export async function uploadReferenceImage(className, file) {
   const form = new FormData();
   form.append("file", file, file.name || "reference.jpg");
-  const enc = encodeURIComponent(className);
-  const { data } = await http.post(apiPath(`/api/cv/reference/${enc}`), form, {
+  const { data } = await http.post(apiPath(API.cvReference(className)), form, {
     ...multipartConfig(),
   });
   return data;
 }
 
 export async function fetchReferenceImage(className) {
-  const enc = encodeURIComponent(className);
-  const { data } = await http.get(apiPath(`/api/cv/reference/${enc}`), {
+  const { data } = await http.get(apiPath(API.cvReference(className)), {
     headers: cvHeaders(),
   });
   return data;
