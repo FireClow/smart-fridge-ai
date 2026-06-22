@@ -19,7 +19,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from backend.model_loader import load_yolo_model, resolve_model_path
@@ -63,6 +64,45 @@ def _cors_origins() -> list[str]:
     "http://localhost:5173,http://127.0.0.1:5173",
   )
   return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+def _frontend_dist() -> Path:
+  return _ROOT / "frontend" / "dist"
+
+
+def _should_serve_frontend() -> bool:
+  if os.getenv("REPLIT_DEPLOYMENT", "").strip().lower() in ("1", "true", "yes"):
+    return True
+  if os.getenv("SERVE_FRONTEND", "").strip().lower() in ("1", "true", "yes"):
+    return True
+  return (_frontend_dist() / "index.html").is_file()
+
+
+def _mount_frontend(app: FastAPI) -> None:
+  dist = _frontend_dist()
+  index = dist / "index.html"
+  if not index.is_file():
+    _LOG.warning("Frontend dist not found at %s — API-only mode", dist)
+    return
+
+  assets_dir = dist / "assets"
+  if assets_dir.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="spa-assets")
+
+  @app.get("/")
+  async def spa_root() -> FileResponse:
+    return FileResponse(index)
+
+  @app.get("/{spa_path:path}")
+  async def spa_paths(spa_path: str) -> FileResponse:
+    if spa_path == "api" or spa_path.startswith("api/"):
+      raise StarletteHTTPException(status_code=404, detail="Not Found")
+    target = dist / spa_path
+    if spa_path and target.is_file():
+      return FileResponse(target)
+    return FileResponse(index)
+
+  _LOG.info("Serving React SPA from %s", dist)
 
 
 def _supabase_configured() -> bool:
@@ -228,3 +268,7 @@ def model_info(request: Request) -> dict:
     "num_classes": len(classes),
     "classes": classes,
   }
+
+
+if _should_serve_frontend():
+  _mount_frontend(app)

@@ -5,12 +5,6 @@
       "entrypoint": "frontend",
       "framework": "vite",
       "routePrefix": "/"
-    },
-    "backend": {
-      "entrypoint": "backend/main.py",
-      "routePrefix": "/_/backend",
-      "memory": 3008,
-      "maxDuration": 60
     }
   }
 }

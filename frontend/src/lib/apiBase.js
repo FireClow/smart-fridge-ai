@@ -8,9 +8,10 @@ export function getApiOrigin() {
     raw = raw.slice(0, -4).replace(/\/+$/, "");
   }
   if (!raw) {
-    if (import.meta.env.DEV) return "";
-    // Vercel Services: backend is mounted at /_/backend (see vercel.json).
-    return "/_/backend";
+    // Dev: Vite proxies /api → FastAPI (local :8001, Replit :8000).
+    // Replit deploy / same-origin: empty origin → relative /api/* on one host.
+    // Vercel-only frontend: set VITE_API_URL to external API (Render, Railway, etc.).
+    return "";
   }
   return raw;
 }

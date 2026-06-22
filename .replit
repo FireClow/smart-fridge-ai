@@ -1,0 +1,22 @@
+modules = ["nodejs-20", "python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+
+run = "bash scripts/replit-dev.sh"
+
+[deployment]
+deploymentTarget = "cloudrun"
+build = ["sh", "-c", "pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build"]
+run = ["sh", "-c", "bash scripts/replit-start.sh"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[env]
+API_PORT = "8000"

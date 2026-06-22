@@ -1,0 +1,20 @@
+# Backend API only — deploy at https://dashboard.render.com
+# Frontend stays on Vercel; set VITE_API_URL to this service URL.
+services:
+  - type: web
+    name: smart-fridge-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: MODEL_PATH
+        value: runs/detect/train-5/weights/best.pt
+      - key: ALLOWED_ORIGINS
+        sync: false

@@ -1,0 +1,10 @@
+backend/
+venv/
+.venv/
+runs/
+*.pt
+__pycache__/
+*.pyc
+.git/
+scripts/
+datasets/

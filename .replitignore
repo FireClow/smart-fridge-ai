@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.git/
+datasets/
+debug-*.log
+.cursor/
