@@ -19,18 +19,25 @@ Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY` (publishable/anon key from Supabase
 
 You can also put `SUPABASE_URL` + `SUPABASE_KEY` in the **repo root** `.env` — the Vite build reads both (handy for Vercel if you already set backend-style names).
 
-### Vercel deploy
+### Vercel deploy (frontend only — backend on Replit/Render)
 
-In Vercel → **Environment Variables** (Production), set **either**:
+**Project settings → General → Root Directory:** set to **`frontend`** (recommended).
 
-| Option A (recommended) | Option B (same as root `.env`) |
-|--------------------------|--------------------------------|
-| `VITE_SUPABASE_URL` | `SUPABASE_URL` |
-| `VITE_SUPABASE_KEY` | `SUPABASE_KEY` (anon/publishable, not service role) |
+Why: the repo root `vercel.json` uses `npm --prefix frontend` for monorepo builds. If Root Directory is already `frontend`, that command looks for `frontend/frontend` and fails with `cd: frontend: No such file or directory`. With Root Directory = `frontend`, Vercel uses `frontend/vercel.json` (`npm install` / `npm run build` / `dist`).
 
-Then **Redeploy** (disable build cache if the old bundle still shows "not configured").
+Alternative: leave Root Directory **empty** and use the root `vercel.json` as-is (`--prefix frontend`).
 
-Optional: `VITE_API_URL` = your hosted FastAPI URL (Render/Railway) without a `/api` suffix.
+**Environment Variables** (Production):
+
+| Variable | Value |
+|----------|--------|
+| `VITE_SUPABASE_URL` or `SUPABASE_URL` | `https://xxx.supabase.co` |
+| `VITE_SUPABASE_KEY` or `SUPABASE_KEY` | anon/publishable key (not service role) |
+| `VITE_API_URL` | **Required** — URL backend FastAPI (Replit/Render), **tanpa** suffix `/api`, e.g. `https://your-repl.replit.app` |
+
+On the **backend** (Replit), set `ALLOWED_ORIGINS` to include your Vercel URL, e.g. `https://smart-fridge-ai.vercel.app`.
+
+Then **Redeploy** (disable build cache if an old bundle still shows "not configured").
 
 ## Run
 
