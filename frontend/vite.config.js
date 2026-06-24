@@ -27,7 +27,20 @@ function resolveSupabaseEnv(mode) {
   return { url, key };
 }
 
-/** Same-origin /api on Replit deploy; external host on Vercel + Render split. */
+function normalizeApiUrl(raw) {
+  let url = String(raw ?? "").trim().replace(/\/+$/, "");
+  if (!url) return "";
+  if (url.toLowerCase().endsWith("/api")) {
+    url = url.slice(0, -4).replace(/\/+$/, "");
+  }
+  return url;
+}
+
+/**
+ * Same-origin /api on Replit deploy; external host on Vercel + Railway split.
+ * In local dev, default to Vite proxy (:8001) unless frontend/.env sets VITE_API_URL.
+ * Root .env may hold Railway URL for docs — it must not override local proxy.
+ */
 function resolveApiEnv(mode) {
   const fromRoot = loadEnv(mode, rootDir, "");
   const fromFrontend = loadEnv(mode, __dirname, "");
@@ -41,11 +54,12 @@ function resolveApiEnv(mode) {
     return "";
   }
 
-  let url = (env.VITE_API_URL || env.API_URL || "").trim().replace(/\/+$/, "");
-  if (url.toLowerCase().endsWith("/api")) {
-    url = url.slice(0, -4).replace(/\/+$/, "");
+  if (mode === "development") {
+    const frontendOnly = loadEnv(mode, __dirname, "VITE_");
+    return normalizeApiUrl(frontendOnly.VITE_API_URL);
   }
-  return url;
+
+  return normalizeApiUrl(env.VITE_API_URL || env.API_URL);
 }
 
 export default defineConfig(({ mode }) => {

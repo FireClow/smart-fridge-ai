@@ -22,6 +22,11 @@ export function getApiOrigin() {
   return raw;
 }
 
+/** True when requests use same-origin `/api` (Vite dev proxy or Replit). */
+export function usesLocalApiProxy() {
+  return !getApiOrigin();
+}
+
 /** @param {string} path e.g. `/api/inventory` */
 export function apiUrl(path) {
   const p = path.startsWith("/") ? path : `/${path}`;

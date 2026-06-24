@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { AppNav } from "../components/AppNav.jsx";
 import { useHealth } from "../hooks/useHealth.js";
+import { getApiOrigin, usesLocalApiProxy } from "../lib/apiBase.js";
 
 export function AppLayout() {
   const { online, health } = useHealth();
@@ -12,10 +13,39 @@ export function AppLayout() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {apiDown ? (
           <div className="mb-6 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            Backend API tidak berjalan. Buka terminal baru di root project, jalankan{" "}
-            <code className="text-rose-100">.\scripts\start-api.ps1</code>, tunggu pesan
-            &quot;Application startup complete&quot; (~20 detik, port{" "}
-            <code className="text-rose-100">8001</code>), lalu refresh halaman ini.
+            {usesLocalApiProxy() ? (
+              <>
+                Backend API tidak berjalan. Dari root project jalankan{" "}
+                <code className="text-rose-100">.\scripts\dev.ps1</code> (API + frontend) atau{" "}
+                <code className="text-rose-100">.\scripts\start-api.ps1</code>, tunggu pesan
+                &quot;Application startup complete&quot; (~20 detik, port{" "}
+                <code className="text-rose-100">8001</code>), lalu refresh.
+              </>
+            ) : (
+              <>
+                Tidak dapat menghubungi API di{" "}
+                <code className="text-rose-100">{getApiOrigin()}</code>. Untuk dev lokal, kosongkan{" "}
+                <code className="text-rose-100">VITE_API_URL</code> di{" "}
+                <code className="text-rose-100">frontend/.env</code> dan jalankan API lokal. Untuk
+                production, set variabel Railway: <code className="text-rose-100">SUPABASE_URL</code>,{" "}
+                <code className="text-rose-100">SUPABASE_KEY</code>, dan{" "}
+                <code className="text-rose-100">ALLOWED_ORIGINS</code>.
+              </>
+            )}
+          </div>
+        ) : null}
+        {health?.status === "ok" && health.supabase_configured === false ? (
+          <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            API aktif tetapi Supabase belum dikonfigurasi di server (
+            {usesLocalApiProxy() ? "root .env" : getApiOrigin()}). Isi{" "}
+            <code className="text-amber-100">SUPABASE_URL</code> dan{" "}
+            <code className="text-amber-100">SUPABASE_KEY</code>
+            {usesLocalApiProxy() ? (
+              <> di root <code className="text-amber-100">.env</code></>
+            ) : (
+              <> di Railway Variables</>
+            )}
+            , lalu restart API.
           </div>
         ) : null}
         {health?.status === "ok" && !("yolo_loaded" in health) ? (

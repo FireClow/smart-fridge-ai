@@ -1,5 +1,5 @@
 import axios from "axios";
-import { apiUrl } from "../lib/apiBase.js";
+import { apiUrl, getApiOrigin, usesLocalApiProxy } from "../lib/apiBase.js";
 
 export const http = axios.create({
   headers: { Accept: "application/json" },
@@ -26,8 +26,13 @@ http.interceptors.response.use(
     const isNetworkError = !error.response;
     let message = error.message;
     if (isNetworkError) {
-      message =
-        "Backend API tidak berjalan. Buka terminal baru di root project dan jalankan: .\\scripts\\start-api.ps1 (menunggu ~20 detik, port 8001).";
+      if (usesLocalApiProxy()) {
+        message =
+          "Backend API tidak berjalan di port 8001. Dari root project jalankan .\\scripts\\start-api.ps1 atau .\\scripts\\dev.ps1 (tunggu 'Application startup complete'), lalu refresh.";
+      } else {
+        const origin = getApiOrigin();
+        message = `Tidak dapat terhubung ke API (${origin}). Periksa VITE_API_URL di Vercel, ALLOWED_ORIGINS di backend, dan status deploy Railway/Render.`;
+      }
     } else if (isHtmlResponse(error.response)) {
       message =
         "API mengembalikan HTML, bukan JSON. Di Vercel set VITE_API_URL ke host FastAPI (Render/Railway). Di Replit biarkan kosong (same-origin /api).";

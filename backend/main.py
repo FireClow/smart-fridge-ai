@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import sys
-import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -19,7 +17,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -37,25 +35,6 @@ from backend.app.limiter import limiter
 load_dotenv(_ROOT / ".env")
 
 _LOG = logging.getLogger(__name__)
-_DEBUG_LOG = _ROOT / "debug-1fd1ee.log"
-
-
-def _agent_log(location: str, message: str, data: dict, hypothesis_id: str) -> None:
-  # #region agent log
-  try:
-    payload = {
-      "sessionId": "1fd1ee",
-      "timestamp": int(time.time() * 1000),
-      "location": location,
-      "message": message,
-      "data": data,
-      "hypothesisId": hypothesis_id,
-    }
-    with _DEBUG_LOG.open("a", encoding="utf-8") as f:
-      f.write(json.dumps(payload) + "\n")
-  except OSError:
-    pass
-  # #endregion
 
 
 def _cors_origins() -> list[str]:
@@ -120,36 +99,21 @@ async def lifespan(app: FastAPI):
   app.state.model_path = str(model_path)
   app.state.yolo_load_error = None
   app.state.yolo_loading = True
-  _agent_log("main.py:lifespan", "lifespan_start", {"model_path": str(model_path)}, "C")
 
   async def _load_yolo() -> None:
-    _agent_log("main.py:lifespan", "yolo_load_start", {}, "C")
     try:
       model = await asyncio.to_thread(load_yolo_model)
       app.state.yolo = model
       app.state.model_path = str(resolve_model_path())
       _LOG.info("YOLO model loaded from %s", app.state.model_path)
-      _agent_log(
-        "main.py:lifespan",
-        "yolo_load_ok",
-        {"model_path": app.state.model_path},
-        "C",
-      )
     except Exception as exc:
       app.state.yolo = None
       app.state.yolo_load_error = f"{type(exc).__name__}: {exc}"
       _LOG.warning("YOLO not loaded: %s", exc)
-      _agent_log(
-        "main.py:lifespan",
-        "yolo_load_fail",
-        {"error": app.state.yolo_load_error},
-        "C",
-      )
     finally:
       app.state.yolo_loading = False
 
   yolo_task = asyncio.create_task(_load_yolo())
-  _agent_log("main.py:lifespan", "server_accepting_requests", {}, "B")
   yield
   yolo_task.cancel()
 
@@ -223,19 +187,15 @@ app.include_router(notifications_router, prefix="/api")
 app.include_router(cv_router, prefix="/api")
 
 
+@app.get("/health")
+def health_alias() -> RedirectResponse:
+  return RedirectResponse(url="/api/health", status_code=307)
+
+
 @app.get("/api/health")
 def health(request: Request) -> dict:
   yolo = getattr(request.app.state, "yolo", None)
   path = getattr(request.app.state, "model_path", str(resolve_model_path()))
-  _agent_log(
-    "main.py:health",
-    "health_hit",
-    {
-      "yolo_loaded": yolo is not None,
-      "yolo_loading": getattr(request.app.state, "yolo_loading", False),
-    },
-    "D",
-  )
   return {
     "status": "ok",
     "yolo_loaded": yolo is not None,
